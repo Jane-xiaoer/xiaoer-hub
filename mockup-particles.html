@@ -342,7 +342,7 @@
 
 <div class="idle-hint" id="idleHint">
   <div class="label">— 点一个馆 —</div>
-  <div class="sub">click a shape below to lock it · auto-cycling otherwise</div>
+  <div class="sub">click a shape below · scroll to zoom · drag to rotate</div>
 </div>
 
 <div class="centre-label" id="label" style="opacity:0">
@@ -358,9 +358,10 @@
 <button class="confirm" id="confirm">Enter</button>
 
 <div class="side-hint">
-  <div><span class="key">CLICK</span> lock shape</div>
+  <div><span class="key">CLICK</span> pick a shape</div>
+  <div><span class="key">SCROLL</span> zoom in / out</div>
   <div><span class="key">Enter</span> enter room</div>
-  <div><span class="key">Esc</span> resume auto</div>
+  <div><span class="key">Esc</span> back to nebula</div>
 </div>
 
 <!-- MediaPipe Hands (loaded lazily — but tags here so namespace exists) -->
@@ -692,10 +693,8 @@ let currentIdx = -1;       // -1 = idle nebula
 let targetIdx  = -1;
 let morphStart = 0;
 let morphing   = false;
-let mode = 'auto';         // 'auto' = self-cycling | 'locked' = user picked, stay put
-let autoHoldEnd = 0;       // next time we should auto-advance
+let mode = 'idle';         // 'idle' = white nebula, waiting | 'locked' = user picked a shape
 const MORPH_DURATION = 2.2;
-const AUTO_HOLD = 4.5;     // seconds to hold a shape in auto mode before advancing
 
 const labelEl     = document.getElementById('label');
 const idleHintEl  = document.getElementById('idleHint');
@@ -718,10 +717,10 @@ function paintRoom(idx) {
 }
 
 function selectRoom(idx, opts = {}) {
-  const { lock = false } = opts;
+  const { lock = true } = opts;          // default: every selection locks
 
   if (idx === targetIdx && !morphing) return;
-  if (morphing && !lock) return;   // auto cycle: wait for current morph; user click can interrupt
+  if (morphing && !lock) return;
   if (idx === currentIdx && !morphing && lock) {
     // user clicked the already-formed shape → just lock & show confirm
     mode = 'locked';
@@ -768,30 +767,33 @@ function selectRoom(idx, opts = {}) {
   }
 }
 
-// Drive auto-cycle when nobody has locked in yet
-function autoTick(elapsed) {
-  if (mode !== 'auto') return;
-  if (morphing) return;
+// (No auto-cycle: the swarm stays as the white nebula until the user
+// clicks a dock button. Removed for clarity per Jane's request.)
 
-  if (currentIdx < 0) {
-    // First-ever auto morph: idle nebula → room 0
-    selectRoom(0, { lock: false });
-    autoHoldEnd = elapsed + MORPH_DURATION + AUTO_HOLD;
-    return;
-  }
-  if (elapsed >= autoHoldEnd) {
-    const next = (currentIdx + 1) % ROOMS.length;
-    selectRoom(next, { lock: false });
-    autoHoldEnd = elapsed + MORPH_DURATION + AUTO_HOLD;
-  }
-}
+// Esc → morph the swarm back to the white nebula (idle state)
+function backToIdle() {
+  if (mode === 'idle' && currentIdx < 0 && !morphing) return;
 
-// Esc → release the lock and resume auto-cycling from the CURRENT shape
-function backToAuto() {
-  if (mode !== 'locked') return;
-  mode = 'auto';
-  autoHoldEnd = clock.getElapsedTime() + AUTO_HOLD; // hold the current shape a bit longer
+  const aA = geom.getAttribute('aTargetA');
+  const aB = geom.getAttribute('aTargetB');
+  aA.array.set(currentIdx < 0 ? nebula : targets[currentIdx]);
+  aB.array.set(nebula);
+  aA.needsUpdate = true;
+  aB.needsUpdate = true;
+
+  uniforms.uColorA.value.setHex(currentIdx < 0 ? 0xffffff : ROOMS[currentIdx].color);
+  uniforms.uColorB.value.setHex(0xffffff);
+  uniforms.uProgress.value = 0;
+
+  targetIdx = -1;
+  morphing = true;
+  morphStart = clock.getElapsedTime();
+  mode = 'idle';
+
   confirmEl.classList.remove('visible');
+  labelEl.style.opacity = '0';
+  idleHintEl.classList.remove('hidden');
+  dockBtns.forEach(b => b.classList.remove('active'));
 }
 
 // Confirm → navigate
@@ -815,7 +817,7 @@ window.addEventListener('keydown', e => {
     if (targetIdx >= 0) window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
   } else if (e.code === 'Escape') {
     e.preventDefault();
-    backToAuto();
+    backToIdle();
   } else if (e.code === 'Digit1') selectRoom(0, { lock: true });
   else if   (e.code === 'Digit2') selectRoom(1, { lock: true });
   else if   (e.code === 'Digit3') selectRoom(2, { lock: true });
@@ -823,13 +825,16 @@ window.addEventListener('keydown', e => {
   else if   (e.code === 'Digit5') selectRoom(4, { lock: true });
 });
 
-// Mouse wheel = step through (also locks)
+// Mouse wheel = camera dolly (zoom into / out of the particle cloud)
+// At z ≈ 0.5 the camera passes through the particle surface — you can see
+// the inside walls. At z ≈ 14 the cloud is small and centred.
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 14;
+let zoomTarget = camera.position.z;
 window.addEventListener('wheel', e => {
-  if (morphing) return;
   e.preventDefault();
-  const dir = Math.sign(e.deltaY);
-  const next = currentIdx < 0 ? 0 : Math.max(0, Math.min(ROOMS.length - 1, currentIdx + dir));
-  selectRoom(next, { lock: true });
+  const factor = e.deltaY > 0 ? 1.10 : 1 / 1.10;
+  zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomTarget * factor));
 }, { passive: false });
 
 // Click on canvas = confirm if user has locked in a shape
@@ -868,18 +873,13 @@ function animate() {
     if (t >= 1.0) {
       morphing = false;
       currentIdx = targetIdx;
-      // ⚠️ Do NOT reset uProgress here — it stays at 1 so the shader keeps
-      // showing aB (the just-formed shape). Resetting to 0 would snap the
-      // swarm back to aA (the PREVIOUS shape) — that was the bug Jane hit.
+      // Don't reset uProgress: shader stays on aB (the just-formed shape).
       uniforms.uIdle.value = currentIdx < 0 ? 1.0 : 0.08;
-      if (mode === 'auto' && currentIdx >= 0) {
-        autoHoldEnd = elapsed + AUTO_HOLD;
-      }
     }
   }
 
-  // Drive auto-cycle (no-op if mode === 'locked')
-  autoTick(elapsed);
+  // Smooth camera zoom toward target
+  camera.position.z += (zoomTarget - camera.position.z) * 0.10;
 
   composer.render();
   requestAnimationFrame(animate);
