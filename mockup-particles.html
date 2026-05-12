@@ -889,7 +889,7 @@ animate();
 // ─── Expose hooks for the gesture module ──────────────────────
 window._hub = {
   selectRoom,
-  backToAuto,
+  backToIdle,
   cycle: (dir) => {
     const baseIdx = currentIdx < 0 ? 0 : currentIdx;
     const next = (baseIdx + dir + ROOMS.length) % ROOMS.length;
