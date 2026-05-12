@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>小耳 · 粒子 hub mockup</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Cutive+Mono&family=Noto+Serif+SC:wght@300;500&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; overflow: hidden;
+    background: #1a1830;
+    color: #f4ecd8;
+    font-family: "Cutive Mono", monospace;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Background gradient (same Moebius night vibe) */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 50% 35% at 50% 18%, rgba(244, 236, 200, 0.16), transparent 60%),
+      radial-gradient(ellipse 80% 50% at 30% 80%, rgba(160, 168, 200, 0.14), transparent 70%),
+      linear-gradient(180deg, #1a1830 0%, #2a2858 28%, #3e3c78 55%, #5a5898 100%);
+    z-index: 0;
+    pointer-events: none;
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 8%,   rgba(244,236,200,0.9), transparent),
+      radial-gradient(1px 1px at 25% 18%,  rgba(244,236,200,0.7), transparent),
+      radial-gradient(1px 1px at 42% 6%,   rgba(244,236,200,0.8), transparent),
+      radial-gradient(1px 1px at 72% 10%,  rgba(244,236,200,0.85), transparent),
+      radial-gradient(1px 1px at 88% 22%,  rgba(244,236,200,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 15% 28%, rgba(244,236,200,0.9), transparent),
+      radial-gradient(1px 1px at 64% 26%,  rgba(244,236,200,0.7), transparent),
+      radial-gradient(1px 1px at 80% 4%,   rgba(244,236,200,0.95), transparent);
+    z-index: 0; pointer-events: none;
+  }
+
+  #c { position: fixed; inset: 0; z-index: 1; cursor: grab; }
+  html.dragging #c { cursor: grabbing; }
+
+  /* HUD overlay */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px;
+    z-index: 10; pointer-events: none;
+  }
+  nav .mark {
+    font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500;
+    font-size: 20px; letter-spacing: 0.06em;
+  }
+  nav .mark .ear { margin-right: 6px; }
+  nav .meta {
+    font-size: 10px; letter-spacing: 0.3em; color: rgba(244,236,216,0.55);
+    text-transform: uppercase;
+  }
+
+  .room-label {
+    position: fixed;
+    left: 50%; bottom: 56px;
+    transform: translateX(-50%);
+    z-index: 10;
+    text-align: center;
+    pointer-events: none;
+  }
+  .room-label .num {
+    font-size: 10px;
+    letter-spacing: 0.6em;
+    color: rgba(244,236,216,0.45);
+    margin-bottom: 6px;
+  }
+  .room-label .name-zh {
+    font-family: "Noto Serif SC", "Cormorant Garamond", serif;
+    font-size: 42px; font-weight: 300;
+    letter-spacing: 0.25em;
+    color: var(--accent, #f4ecc8);
+    text-shadow: 0 0 24px var(--accent-glow, rgba(244,236,200,0.4));
+    transition: color 1s ease, text-shadow 1s ease;
+  }
+  .room-label .name-en {
+    font-family: "Cormorant Garamond", serif; font-style: italic;
+    font-size: 14px; letter-spacing: 0.15em;
+    color: var(--accent, #f4ecc8);
+    opacity: 0.7;
+    margin-top: 4px;
+    transition: color 1s ease;
+  }
+  .room-label.fade-out { animation: labelOut 1s ease forwards; }
+  .room-label.fade-in  { animation: labelIn  1s ease forwards; }
+  @keyframes labelOut { to { opacity: 0; transform: translate(-50%, 6px); } }
+  @keyframes labelIn  { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translateX(-50%); } }
+
+  .room-cta {
+    margin-top: 18px;
+    display: inline-block;
+    pointer-events: auto;
+    cursor: pointer;
+    font-family: "Cutive Mono", monospace;
+    font-size: 11px; letter-spacing: 0.4em;
+    text-transform: uppercase;
+    padding: 8px 22px;
+    border: 1px solid var(--accent, #f4ecc8);
+    color: var(--accent, #f4ecc8);
+    border-radius: 100px;
+    background: rgba(26,24,48,0.4);
+    backdrop-filter: blur(6px);
+    transition: all 0.4s ease;
+  }
+  .room-cta:hover {
+    background: var(--accent, #f4ecc8);
+    color: #1a1830;
+    letter-spacing: 0.55em;
+  }
+
+  .hud {
+    position: fixed; left: 50%; top: 18px;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-size: 10px; letter-spacing: 0.4em; text-transform: uppercase;
+    color: rgba(244,236,216,0.45);
+    pointer-events: none;
+  }
+
+  .progress {
+    position: fixed;
+    left: 50%; top: 36px;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex; gap: 10px;
+    pointer-events: none;
+  }
+  .progress .pip {
+    width: 18px; height: 1.5px;
+    background: rgba(244,236,216,0.25);
+    transition: background 0.5s, width 0.5s;
+  }
+  .progress .pip.active {
+    background: var(--accent, #f4ecc8);
+    width: 28px;
+  }
+
+  .side-hint {
+    position: fixed;
+    right: 28px; bottom: 28px;
+    z-index: 10;
+    font-size: 9px; letter-spacing: 0.3em;
+    color: rgba(244,236,216,0.4);
+    text-transform: uppercase;
+    pointer-events: none;
+    text-align: right;
+    line-height: 1.8;
+  }
+  .side-hint .key {
+    border: 1px solid rgba(244,236,216,0.25);
+    padding: 2px 7px; margin: 0 4px;
+    color: rgba(244,236,216,0.6);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<nav>
+  <div class="mark"><span class="ear">👂</span><span style="font-style:italic">XIAOER</span> · 五馆</div>
+  <div class="meta">PARTICLE MOCKUP &middot; v0</div>
+</nav>
+
+<div class="hud">5 FORMS · 5 ROOMS</div>
+<div class="progress" id="progress">
+  <span class="pip active"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+</div>
+
+<div class="room-label" id="label">
+  <div class="num" id="num">— 01 —</div>
+  <div class="name-zh" id="name-zh">城市馆</div>
+  <div class="name-en" id="name-en">City</div>
+  <a class="room-cta" id="cta" href="#">Enter →</a>
+</div>
+
+<div class="side-hint">
+  <div><span class="key">DRAG</span> rotate</div>
+  <div><span class="key">SPACE</span> next</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ── Scene setup ─────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 6);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
+
+// Post-processing (bloom for glow)
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.85, 0.5, 0.05);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// Orbit (drag rotate)
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.rotateSpeed = 0.6;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.6;
+
+document.documentElement.addEventListener('mousedown', () => document.documentElement.classList.add('dragging'));
+window.addEventListener('mouseup', () => document.documentElement.classList.remove('dragging'));
+
+// ── Rooms config ────────────────────────────────────────────
+const N = 12000;  // particle count
+const ROOMS = [
+  { num: '01', zh: '城市馆',   en: 'City',    color: 0x7898b8, geo: 'cube',         url: 'https://city-threejs.vercel.app' },
+  { num: '02', zh: '跳舞馆',   en: 'Dance',   color: 0xf0c8d8, geo: 'octahedron',   url: 'https://dance-beta.vercel.app' },
+  { num: '03', zh: '挂画馆',   en: 'Gallery', color: 0xf4ecc8, geo: 'dodecahedron', url: 'https://ai-mvp-psi.vercel.app' },
+  { num: '04', zh: '肖像馆',   en: 'Portrait',color: 0x9080a0, geo: 'icosahedron',  url: 'https://headshot-psi-indol.vercel.app' },
+  { num: '05', zh: '相机馆',   en: 'Camera',  color: 0x98b8a8, geo: 'torus',        url: 'https://camera-museum-nine.vercel.app' },
+];
+
+// Build a target-position buffer from a Three.js geometry by surface-sampling
+function sampleGeometry(geometry, count, scale = 1.2) {
+  const mat = new THREE.MeshBasicMaterial();
+  const mesh = new THREE.Mesh(geometry, mat);
+  mesh.scale.setScalar(scale);
+  mesh.updateMatrixWorld(true);
+  // MeshSurfaceSampler needs indexed geometry; ensure that:
+  const sampler = new MeshSurfaceSampler(mesh).build();
+  const arr = new Float32Array(count * 3);
+  const tmp = new THREE.Vector3();
+  for (let i = 0; i < count; i++) {
+    sampler.sample(tmp);
+    tmp.multiplyScalar(scale);
+    arr[i*3 + 0] = tmp.x;
+    arr[i*3 + 1] = tmp.y;
+    arr[i*3 + 2] = tmp.z;
+  }
+  return arr;
+}
+
+// Create all 5 target buffers
+function makeGeometry(name) {
+  switch (name) {
+    case 'cube':         return new THREE.BoxGeometry(2, 2, 2, 12, 12, 12);
+    case 'octahedron':   return new THREE.OctahedronGeometry(1.4, 4);
+    case 'dodecahedron': return new THREE.DodecahedronGeometry(1.4, 2);
+    case 'icosahedron':  return new THREE.IcosahedronGeometry(1.4, 3);
+    case 'torus':        return new THREE.TorusGeometry(1.2, 0.45, 32, 64);
+    default:             return new THREE.SphereGeometry(1.4, 32, 32);
+  }
+}
+
+const targets = ROOMS.map(r => sampleGeometry(makeGeometry(r.geo), N, 1.0));
+
+// ── Particle system ─────────────────────────────────────────
+const positions = new Float32Array(N * 3);          // current
+const targetA   = new Float32Array(N * 3);          // morph FROM
+const targetB   = new Float32Array(N * 3);          // morph TO
+const random    = new Float32Array(N);              // jitter offsets
+
+// Start positions: scattered sphere shell, gives 'gathering' feel on first morph-in
+for (let i = 0; i < N; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi   = Math.acos(2 * Math.random() - 1);
+  const r     = 5 + Math.random() * 3;
+  positions[i*3+0] = r * Math.sin(phi) * Math.cos(theta);
+  positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+  positions[i*3+2] = r * Math.cos(phi);
+  random[i] = Math.random();
+}
+// Initial A/B: both = room 0 target (so initial morph snaps from scattered sphere)
+targetA.set(targets[0]);
+targetB.set(targets[0]);
+
+const geom = new THREE.BufferGeometry();
+geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geom.setAttribute('aTargetA', new THREE.BufferAttribute(targetA, 3));
+geom.setAttribute('aTargetB', new THREE.BufferAttribute(targetB, 3));
+geom.setAttribute('aRandom',  new THREE.BufferAttribute(random, 1));
+
+// Shader material — morph in vertex, glow in fragment
+const uniforms = {
+  uProgress: { value: 0.0 },         // 0..1 morph A→B
+  uColorA:   { value: new THREE.Color(ROOMS[0].color) },
+  uColorB:   { value: new THREE.Color(ROOMS[0].color) },
+  uTime:     { value: 0 },
+  uSize:     { value: 6.0 * renderer.getPixelRatio() },
+};
+
+const material = new THREE.ShaderMaterial({
+  uniforms,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  vertexShader: /* glsl */`
+    attribute vec3 aTargetA;
+    attribute vec3 aTargetB;
+    attribute float aRandom;
+    uniform float uProgress;
+    uniform float uTime;
+    uniform float uSize;
+    varying float vNoise;
+    varying float vProgress;
+
+    // Pseudo-curl: offset each particle along an arc so morphs feel organic
+    vec3 curlOffset(vec3 a, vec3 b, float t, float seed) {
+      vec3 mid = mix(a, b, 0.5);
+      // perpendicular vector that varies per particle
+      vec3 axis = normalize(vec3(sin(seed*6.28), cos(seed*4.7), sin(seed*9.1)));
+      vec3 perp = normalize(cross(b - a, axis)) * length(b - a) * 0.3;
+      float arc = sin(t * 3.14159) * (0.4 + 0.6 * seed);
+      return mid + perp * arc;
+    }
+
+    void main() {
+      // Eased progress per particle (varies by aRandom for organic stagger)
+      float p = clamp((uProgress - aRandom * 0.35) / 0.65, 0.0, 1.0);
+      p = p * p * (3.0 - 2.0 * p);  // smoothstep
+      vProgress = p;
+
+      // Curved bezier-ish morph path
+      vec3 mid = curlOffset(aTargetA, aTargetB, p, aRandom);
+      vec3 pos = mix(
+        mix(aTargetA, mid, p),
+        mix(mid, aTargetB, p),
+        p
+      );
+
+      // Idle jitter so the formed shape breathes
+      float jitter = sin(uTime * 1.2 + aRandom * 31.4) * 0.012
+                   + cos(uTime * 0.7 + aRandom * 17.1) * 0.012;
+      pos += normalize(pos + 0.001) * jitter;
+
+      vNoise = aRandom;
+
+      vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = uSize * (1.0 / -mv.z) * (0.7 + 0.6 * aRandom);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform vec3 uColorA;
+    uniform vec3 uColorB;
+    uniform float uProgress;
+    varying float vNoise;
+    varying float vProgress;
+
+    void main() {
+      // soft circular sprite
+      vec2 uv = gl_PointCoord - 0.5;
+      float d = length(uv);
+      float a = smoothstep(0.5, 0.0, d);
+      if (a < 0.02) discard;
+
+      // crossfade colour (slightly delayed vs position so colour 'follows')
+      float colorProg = smoothstep(0.15, 0.85, uProgress);
+      vec3 col = mix(uColorA, uColorB, colorProg);
+      // brighten the "in-flight" particles
+      col += vec3(0.18) * vProgress * (1.0 - vProgress) * 4.0;
+
+      gl_FragColor = vec4(col, a * (0.85 + 0.15 * vNoise));
+    }
+  `,
+});
+
+const points = new THREE.Points(geom, material);
+scene.add(points);
+
+// ── Morph driver ────────────────────────────────────────────
+let currentRoom = 0;
+let nextRoom    = 0;
+let morphStartTime = 0;
+let morphing = false;
+const MORPH_DURATION = 2.2; // seconds
+const HOLD_DURATION  = 4.5; // hold a shape this long before auto-morph
+
+const labelEl = document.getElementById('label');
+const numEl   = document.getElementById('num');
+const zhEl    = document.getElementById('name-zh');
+const enEl    = document.getElementById('name-en');
+const ctaEl   = document.getElementById('cta');
+const progressEl = document.getElementById('progress');
+
+function paintLabel(idx) {
+  const r = ROOMS[idx];
+  labelEl.style.setProperty('--accent', `#${r.color.toString(16).padStart(6,'0')}`);
+  labelEl.style.setProperty('--accent-glow', `rgba(${(r.color>>16)&255}, ${(r.color>>8)&255}, ${r.color&255}, 0.45)`);
+  numEl.textContent = `— ${r.num} —`;
+  zhEl.textContent  = r.zh;
+  enEl.textContent  = r.en;
+  ctaEl.href = r.url;
+  [...progressEl.children].forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+paintLabel(0);
+
+function startMorph(toIdx) {
+  if (morphing) return;
+  morphing = true;
+  morphStartTime = clock.getElapsedTime();
+  nextRoom = toIdx;
+
+  // Update geometry attributes
+  const aA = geom.getAttribute('aTargetA');
+  const aB = geom.getAttribute('aTargetB');
+  aA.array.set(targets[currentRoom]);
+  aB.array.set(targets[nextRoom]);
+  aA.needsUpdate = true;
+  aB.needsUpdate = true;
+
+  uniforms.uColorA.value.setHex(ROOMS[currentRoom].color);
+  uniforms.uColorB.value.setHex(ROOMS[nextRoom].color);
+
+  // Fade label out, then in with new
+  labelEl.classList.remove('fade-in');
+  labelEl.classList.add('fade-out');
+  setTimeout(() => {
+    paintLabel(nextRoom);
+    labelEl.classList.remove('fade-out');
+    labelEl.classList.add('fade-in');
+  }, 900);
+}
+
+function endMorph() {
+  morphing = false;
+  currentRoom = nextRoom;
+  uniforms.uProgress.value = 0;
+}
+
+// Auto-cycle
+let holdUntil = HOLD_DURATION;
+function autoTick(elapsed) {
+  if (!morphing && elapsed > holdUntil) {
+    startMorph((currentRoom + 1) % ROOMS.length);
+  }
+  if (morphing) {
+    const t = (elapsed - morphStartTime) / MORPH_DURATION;
+    uniforms.uProgress.value = Math.min(t, 1.0);
+    if (t >= 1.0) {
+      endMorph();
+      holdUntil = elapsed + HOLD_DURATION;
+    }
+  }
+}
+
+// Manual: space bar or click on CTA's surroundings → next
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!morphing) {
+      startMorph((currentRoom + 1) % ROOMS.length);
+      holdUntil = clock.getElapsedTime() + 10; // delay auto for a bit
+    }
+  }
+});
+
+// ── Resize ──────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  uniforms.uSize.value = 6.0 * renderer.getPixelRatio();
+});
+
+// ── Render loop ─────────────────────────────────────────────
+const clock = new THREE.Clock();
+function animate() {
+  const elapsed = clock.getElapsedTime();
+  uniforms.uTime.value = elapsed;
+  autoTick(elapsed);
+  controls.update();
+  composer.render();
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+
+</body>
+</html>
