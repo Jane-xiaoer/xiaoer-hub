@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>小耳 · 五馆</title>
+<meta name="description" content="月夜的五道门 — 小耳 Jane 的互动项目集" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Cutive+Mono&family=Noto+Serif+SC:wght@300;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ─── Moebius dream-night palette ─────────────────────────────
+     Inspired by Jean Giraud's lunar landscape illustrations —
+     plum-purple sky, full moon, cherry-blossom canopies, distant
+     cone-shaped hills, hatched grass plains. ─────────────────── */
+  :root {
+    --ink:           #1a1830;   /* deep blue-black ink */
+    --bg-deep:       #1c1a3a;   /* midnight depths */
+    --bg-mid:        #2f2d5a;   /* indigo middle */
+    --bg-warm:       #4f4d80;   /* dawn purple */
+    --moonlight:     #f4ecc8;   /* warm moon glow */
+    --moon-edge:     #d8c878;   /* moon rim */
+    --paper:         #e8e0f0;   /* lilac paper */
+    --cream:         #f4ecd8;   /* parchment */
+    --sky-blue:      #7898b8;   /* swallow blue */
+    --sky-deep:      #4a5a80;   /* shadow blue */
+    --cherry:        #f0c8d8;   /* sakura pink */
+    --cherry-deep:   #d098b0;   /* sakura shade */
+    --mint:          #98b8a8;   /* mist green */
+    --mist:          #b0a8c0;   /* fog purple */
+    --moss:          #788868;   /* hill green */
+    --cone-purple:   #9080a0;   /* cone hill purple */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-deep);
+    color: var(--cream);
+    font-family: "Cutive Mono", ui-monospace, monospace;
+    cursor: grab;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  html.dragging, html.dragging * { cursor: grabbing; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ─── Background: midnight-sky gradient ──────────────────────── */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 50% 35% at 50% 18%, rgba(244, 236, 200, 0.18), transparent 60%),
+      radial-gradient(ellipse 80% 50% at 30% 80%, rgba(160, 168, 200, 0.16), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 75% 85%, rgba(120, 152, 184, 0.14), transparent 70%),
+      linear-gradient(180deg,
+        #1a1830 0%,
+        #2a2858 28%,
+        #3e3c78 55%,
+        #5a5898 85%,
+        #6a6aa0 100%);
+    z-index: 0;
+    pointer-events: none;
+    animation: skyShift 60s ease-in-out infinite alternate;
+  }
+  @keyframes skyShift {
+    0%   { transform: translate(0,0); }
+    100% { transform: translate(-1.5%, 1.5%); }
+  }
+
+  /* ─── Star field (dense fixed dots) ─────────────────────────── */
+  .starfield {
+    position: fixed; inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1px 1px at 10%  8%,  rgba(244,236,200,0.9), transparent),
+      radial-gradient(1px 1px at 25%  18%, rgba(244,236,200,0.7), transparent),
+      radial-gradient(1px 1px at 42%  6%,  rgba(244,236,200,0.8), transparent),
+      radial-gradient(1px 1px at 58%  14%, rgba(244,236,200,0.6), transparent),
+      radial-gradient(1px 1px at 72%  10%, rgba(244,236,200,0.85), transparent),
+      radial-gradient(1px 1px at 88%  22%, rgba(244,236,200,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 15% 28%, rgba(244,236,200,0.9), transparent),
+      radial-gradient(1px 1px at 33%  32%, rgba(244,236,200,0.55), transparent),
+      radial-gradient(1px 1px at 64%  26%, rgba(244,236,200,0.7), transparent),
+      radial-gradient(1px 1px at 92%  35%, rgba(244,236,200,0.6), transparent),
+      radial-gradient(1.5px 1.5px at 6%  16%, rgba(244,236,200,0.85), transparent),
+      radial-gradient(1px 1px at 50%  30%, rgba(244,236,200,0.5), transparent),
+      radial-gradient(1px 1px at 22%  42%, rgba(244,236,200,0.6), transparent),
+      radial-gradient(1px 1px at 80%  4%,  rgba(244,236,200,0.95), transparent),
+      radial-gradient(1.5px 1.5px at 40% 22%, rgba(244,236,200,0.75), transparent);
+  }
+  .starfield::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 14% 60%, rgba(244,236,200,0.4), transparent),
+      radial-gradient(1px 1px at 30% 72%, rgba(244,236,200,0.3), transparent),
+      radial-gradient(1px 1px at 70% 56%, rgba(244,236,200,0.35), transparent),
+      radial-gradient(1px 1px at 86% 64%, rgba(244,236,200,0.4), transparent);
+    animation: starTwinkle 5s ease-in-out infinite alternate;
+  }
+  @keyframes starTwinkle {
+    0%   { opacity: 0.6; }
+    100% { opacity: 1;   }
+  }
+
+  /* ─── Moon (big, fixed top-centre) ──────────────────────────── */
+  .moon {
+    position: fixed;
+    top: 9%; left: 50%;
+    transform: translateX(-50%);
+    width: 140px; height: 140px;
+    z-index: 0;
+    pointer-events: none;
+    animation: moonGlow 8s ease-in-out infinite alternate;
+  }
+  .moon-disc {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 38% 32%, var(--moonlight) 0%, var(--moonlight) 55%, var(--moon-edge) 100%);
+    box-shadow:
+      0 0 30px rgba(244, 236, 200, 0.5),
+      0 0 80px rgba(244, 236, 200, 0.3),
+      0 0 160px rgba(244, 236, 200, 0.2),
+      0 0 240px rgba(216, 200, 120, 0.12);
+  }
+  .moon::before, .moon::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(244, 236, 200, 0.18);
+    pointer-events: none;
+  }
+  .moon::before { top: -16px; left: -16px; right: -16px; bottom: -16px; }
+  .moon::after  { top: -34px; left: -34px; right: -34px; bottom: -34px; opacity: 0.5; }
+  @keyframes moonGlow {
+    0%   { filter: brightness(1)   blur(0px); }
+    100% { filter: brightness(1.1) blur(0.4px); }
+  }
+
+  /* ─── Distant scenery (mountains + cone hills + cherry trees) ─ */
+  .scenery {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 50vh;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .scenery svg {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Grass hatching (Moebius signature) — bottom plain */
+  .grass {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 30vh;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, transparent 0%, rgba(74, 90, 128, 0.4) 40%, rgba(46, 50, 88, 0.7) 100%);
+    overflow: hidden;
+  }
+  .grass::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      /* fine repeating hatches at slight angle, with perspective via gradient mask */
+      repeating-linear-gradient(8deg,
+        transparent 0px, transparent 5px,
+        rgba(180, 168, 200, 0.18) 5px, rgba(180, 168, 200, 0.18) 5.6px),
+      repeating-linear-gradient(-8deg,
+        transparent 0px, transparent 7px,
+        rgba(180, 168, 200, 0.10) 7px, rgba(180, 168, 200, 0.10) 7.6px);
+    mask: linear-gradient(180deg, transparent 0%, #000 35%, #000 100%);
+    -webkit-mask: linear-gradient(180deg, transparent 0%, #000 35%, #000 100%);
+  }
+
+  /* ─── Mandala — kept, recoloured to moonlight tones ─────────── */
+  .mandala {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 900px; height: 900px;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.32;
+    animation: mandalaRotate 140s linear infinite;
+  }
+  .mandala-fast {
+    animation-duration: 70s;
+    animation-direction: reverse;
+    opacity: 0.22;
+    width: 580px; height: 580px;
+  }
+  @keyframes mandalaRotate {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  /* ─── Top nav ───────────────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 36px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  nav .mark {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    color: var(--cream);
+    text-shadow: 0 0 24px rgba(244, 236, 200, 0.35);
+    position: relative;
+  }
+  nav .mark .ear { display: inline-block; margin-right: 8px; }
+  nav .mark::before {
+    content: "·";
+    margin-right: 8px;
+    color: var(--moonlight);
+  }
+  nav .meta {
+    font-family: "Cutive Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    color: rgba(244, 236, 216, 0.50);
+    text-transform: uppercase;
+  }
+  nav .mark .glitch { position: relative; display: inline-block; }
+  nav .mark .glitch::before,
+  nav .mark .glitch::after {
+    content: attr(data-text);
+    position: absolute; top: 0; left: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  nav .mark .glitch::before {
+    color: var(--cherry);
+    animation: glitchA 9s steps(1, end) infinite;
+  }
+  nav .mark .glitch::after {
+    color: var(--sky-blue);
+    animation: glitchB 9s steps(1, end) infinite;
+  }
+  @keyframes glitchA {
+    0%, 96.5%, 100% { opacity: 0; transform: translate(0,0); }
+    97% { opacity: 0.7; transform: translate(-2px, 1px); }
+    98% { opacity: 0.7; transform: translate(2px, -1px); }
+    99% { opacity: 0; }
+  }
+  @keyframes glitchB {
+    0%, 97%, 100% { opacity: 0; transform: translate(0,0); }
+    97.5% { opacity: 0.6; transform: translate(2px, -1px); }
+    98.5% { opacity: 0.6; transform: translate(-2px, 1px); }
+  }
+
+  /* ─── Stage ─────────────────────────────────────────────────── */
+  .stage {
+    position: fixed; inset: 0;
+    perspective: 1500px;
+    perspective-origin: 50% 50%;
+    z-index: 1;
+  }
+  .pentagon {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    transform-style: preserve-3d;
+    transform: translate(-50%, -50%) rotateX(var(--tilt, -8deg)) rotateY(var(--rotation, 0deg));
+    will-change: transform;
+    animation: pentagonEnter 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes pentagonEnter {
+    0%   { transform: translate(-50%, -50%) rotateX(60deg) rotateY(-180deg) scale(0.4); opacity: 0; }
+    100% { transform: translate(-50%, -50%) rotateX(var(--tilt, -8deg)) rotateY(var(--rotation, 0deg)) scale(1); opacity: 1; }
+  }
+
+  /* ─── Door ──────────────────────────────────────────────────── */
+  .door {
+    --door-w: 290px;
+    --door-h: 400px;
+    --door-r: 300px;
+    --accent: var(--moonlight);
+    --accent-soft: rgba(244, 236, 200, 0.35);
+
+    position: absolute;
+    top: calc(var(--door-h) / -2);
+    left: calc(var(--door-w) / -2);
+    width: var(--door-w);
+    height: var(--door-h);
+    transform-style: preserve-3d;
+    cursor: pointer;
+    pointer-events: auto;
+
+    background:
+      linear-gradient(180deg,
+        rgba(26, 24, 56, 0.92) 0%,
+        rgba(40, 38, 80, 0.94) 60%,
+        rgba(54, 52, 100, 0.96) 100%);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    overflow: hidden;
+    backface-visibility: hidden;
+
+    box-shadow:
+      0 0 0 1px rgba(244, 236, 200, 0.10),
+      0 0 24px var(--accent-soft),
+      inset 0 0 80px rgba(244, 236, 200, 0.04);
+
+    transition: box-shadow 0.5s ease, transform 0.5s ease, border-color 0.5s ease;
+  }
+  /* Per-door cool accent. Order: 城市/跳舞/挂画/肖像/相机 */
+  .door.d1 { transform: rotateY(  0deg) translateZ(var(--door-r)); --accent: var(--sky-blue);     --accent-soft: rgba(120, 152, 184, 0.45); }
+  .door.d2 { transform: rotateY( 72deg) translateZ(var(--door-r)); --accent: var(--cherry);       --accent-soft: rgba(240, 200, 216, 0.45); }
+  .door.d3 { transform: rotateY(144deg) translateZ(var(--door-r)); --accent: var(--moonlight);    --accent-soft: rgba(244, 236, 200, 0.45); }
+  .door.d4 { transform: rotateY(216deg) translateZ(var(--door-r)); --accent: var(--cone-purple);  --accent-soft: rgba(144, 128, 160, 0.45); }
+  .door.d5 { transform: rotateY(288deg) translateZ(var(--door-r)); --accent: var(--mint);         --accent-soft: rgba(152, 184, 168, 0.45); }
+
+  .door:hover {
+    border-color: var(--accent);
+    box-shadow:
+      0 0 0 1px var(--accent),
+      0 0 30px var(--accent-soft),
+      0 0 80px var(--accent-soft),
+      inset 0 0 80px rgba(244, 236, 200, 0.10);
+  }
+
+  .door-hatch {
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(45deg,
+        transparent 0px, transparent 8px,
+        rgba(244, 236, 216, 0.04) 8px, rgba(244, 236, 216, 0.04) 9px),
+      repeating-linear-gradient(-45deg,
+        transparent 0px, transparent 8px,
+        rgba(244, 236, 216, 0.025) 8px, rgba(244, 236, 216, 0.025) 9px);
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .door:hover .door-hatch {
+    background-image:
+      repeating-linear-gradient(45deg,
+        transparent 0px, transparent 5px,
+        rgba(244, 236, 216, 0.08) 5px, rgba(244, 236, 216, 0.08) 6px),
+      repeating-linear-gradient(-45deg,
+        transparent 0px, transparent 5px,
+        rgba(244, 236, 216, 0.05) 5px, rgba(244, 236, 216, 0.05) 6px);
+  }
+
+  .door::before, .door::after {
+    content: "";
+    position: absolute;
+    width: 16px; height: 16px;
+    border: 1px solid var(--accent);
+    opacity: 0.5;
+    transition: opacity 0.4s, width 0.4s, height 0.4s;
+  }
+  .door::before { top: 10px;    left: 10px;   border-right: 0; border-bottom: 0; }
+  .door::after  { bottom: 10px; right: 10px;  border-left:  0; border-top:    0; }
+  .door:hover::before, .door:hover::after { opacity: 1; width: 22px; height: 22px; }
+
+  .door-inner {
+    position: absolute;
+    inset: 0;
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+  }
+  .door-num {
+    font-family: "Cutive Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    color: var(--accent);
+    opacity: 0.7;
+  }
+  .door-num::before, .door-num::after { content: "—"; margin: 0 8px; opacity: 0.5; }
+  .door-icon {
+    font-size: 88px;
+    line-height: 1;
+    filter: drop-shadow(0 0 18px var(--accent-soft)) drop-shadow(0 4px 8px rgba(0,0,0,0.55));
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: iconBreathe 6s ease-in-out infinite;
+  }
+  @keyframes iconBreathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.04); }
+  }
+  .door:hover .door-icon { transform: translateY(-6px) scale(1.08) rotate(-2deg); }
+  .door-zh {
+    font-family: "Noto Serif SC", "Cormorant Garamond", serif;
+    font-weight: 300;
+    font-size: 30px;
+    letter-spacing: 0.15em;
+    color: var(--cream);
+    text-shadow: 0 0 14px var(--accent-soft);
+  }
+  .door-en {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-top: 6px;
+    opacity: 0.9;
+  }
+  .door-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "Cutive Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: rgba(244, 236, 216, 0.55);
+    padding: 4px 0;
+    transition: color 0.4s, letter-spacing 0.4s;
+  }
+  .door-cta::before, .door-cta::after {
+    content: "";
+    display: inline-block;
+    width: 12px; height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+  .door:hover .door-cta { color: var(--accent); letter-spacing: 0.55em; }
+  .door-mark {
+    position: absolute;
+    top: 18px; left: 50%;
+    transform: translateX(-50%);
+    width: 28px; height: 1px;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+  .door-mark::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 50%;
+    transform: translateX(-50%);
+    width: 18px; height: 1px;
+    background: var(--accent);
+  }
+
+  /* ─── Core (moon-themed pulse) ──────────────────────────────── */
+  .core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px;
+    background: var(--moonlight);
+    border-radius: 50%;
+    box-shadow:
+      0 0 14px var(--moonlight),
+      0 0 32px rgba(244, 236, 200, 0.7),
+      0 0 72px rgba(216, 200, 120, 0.4);
+    z-index: 3;
+    pointer-events: none;
+    animation: corePulse 5s ease-in-out infinite;
+  }
+  @keyframes corePulse {
+    0%, 100% { opacity: 1;    transform: translate(-50%, -50%) scale(1); }
+    50%      { opacity: 0.55; transform: translate(-50%, -50%) scale(1.6); }
+  }
+  .core-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px; height: 60px;
+    border: 1px solid var(--moonlight);
+    border-radius: 50%;
+    opacity: 0.2;
+    z-index: 2;
+    pointer-events: none;
+    animation: ringPulse 5s ease-in-out infinite;
+  }
+  @keyframes ringPulse {
+    0%, 100% { width: 60px;  height: 60px;  opacity: 0.2; }
+    50%      { width: 100px; height: 100px; opacity: 0.06;}
+  }
+
+  /* ─── HUD ───────────────────────────────────────────────────── */
+  .hud {
+    position: fixed;
+    bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-family: "Cutive Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: rgba(244, 236, 216, 0.45);
+    text-transform: uppercase;
+    pointer-events: none;
+    text-align: center;
+  }
+  .hud .hint-key {
+    border: 1px solid rgba(244, 236, 216, 0.25);
+    padding: 2px 8px;
+    margin: 0 4px;
+    color: rgba(244, 236, 216, 0.7);
+  }
+  .side-meta {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    z-index: 10;
+    font-family: "Cutive Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: rgba(244, 236, 216, 0.45);
+    text-transform: uppercase;
+    text-align: right;
+    pointer-events: none;
+    line-height: 1.9;
+  }
+  .side-meta .row { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+  .side-meta .dot {
+    width: 5px; height: 5px;
+    background: var(--moonlight);
+    box-shadow: 0 0 6px var(--moonlight);
+    animation: corePulse 2.4s ease-in-out infinite;
+  }
+  .corner-meta {
+    position: fixed;
+    top: 80px; left: 36px;
+    z-index: 10;
+    font-family: "Cutive Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: rgba(244, 236, 216, 0.4);
+    text-transform: uppercase;
+    line-height: 1.9;
+    pointer-events: none;
+  }
+  .corner-meta .label { color: var(--moonlight); opacity: 0.7; }
+
+  /* Door opening anim */
+  .door.opening { animation: doorOpen 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  @keyframes doorOpen {
+    0%   { transform: rotateY(var(--y-base, 0deg)) translateZ(var(--door-r)) scale(1);   opacity: 1; }
+    40%  { transform: rotateY(var(--y-base, 0deg)) translateZ(calc(var(--door-r) * 1.2)) scale(1.1); opacity: 1; }
+    100% { transform: rotateY(var(--y-base, 0deg)) translateZ(calc(var(--door-r) * 2.2)) scale(2.4); opacity: 0; }
+  }
+
+  /* ─── Swallow that flies across periodically ────────────────── */
+  .swallow {
+    position: fixed;
+    top: 22%;
+    left: -120px;
+    width: 60px; height: 30px;
+    z-index: 1;
+    pointer-events: none;
+    animation: swallowFly 18s ease-in-out infinite;
+    opacity: 0;
+  }
+  @keyframes swallowFly {
+    0%, 100% { opacity: 0; transform: translate(0, 0); }
+    5%       { opacity: 1; }
+    50%      { opacity: 1; transform: translate(105vw, -6vh); }
+    55%      { opacity: 0; }
+    100%     { transform: translate(105vw, -6vh); }
+  }
+  .swallow-2 {
+    top: 14%;
+    animation-delay: -10s;
+    animation-duration: 22s;
+    transform: scaleX(-1);
+  }
+  .swallow-2 svg { transform: scaleX(-1); }
+
+  /* ─── Sakura petals drifting ────────────────────────────────── */
+  .petal {
+    position: fixed;
+    width: 14px; height: 10px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    animation: petalDrift 16s linear infinite;
+  }
+  @keyframes petalDrift {
+    0%   { transform: translate(0, -10vh) rotate(0deg);    opacity: 0; }
+    8%   { opacity: 0.85; }
+    50%  { transform: translate(-30px, 50vh) rotate(180deg); }
+    92%  { opacity: 0.5; }
+    100% { transform: translate(20px, 110vh) rotate(360deg); opacity: 0; }
+  }
+
+  /* ─── Mobile ────────────────────────────────────────────────── */
+  @media (max-width: 700px) {
+    .door {
+      --door-w: 220px;
+      --door-h: 310px;
+      --door-r: 220px;
+    }
+    .door-icon { font-size: 70px; }
+    .door-zh { font-size: 24px; }
+    .moon { width: 96px; height: 96px; }
+    .mandala { width: 600px; height: 600px; }
+    .mandala-fast { width: 380px; height: 380px; }
+    .corner-meta { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── Star field ─── -->
+<div class="starfield"></div>
+
+<!-- ─── Moon ─── -->
+<div class="moon"><div class="moon-disc"></div></div>
+
+<!-- ─── Distant scenery — mountains, cone hills, cherry trees ─── -->
+<div class="scenery">
+  <!-- Layer 1 — far mountains silhouette (mid-purple, top of scenery) -->
+  <svg viewBox="0 0 1440 600" preserveAspectRatio="none" style="opacity:0.7;">
+    <path d="M0,420 L60,400 L130,360 L210,395 L290,345 L380,375 L460,330 L540,365 L640,310 L730,340 L830,290 L920,320 L1010,275 L1120,310 L1220,265 L1340,300 L1440,290 L1440,600 L0,600 Z"
+          fill="#3e3c78"/>
+  </svg>
+  <!-- Layer 2 — closer hills (deeper blue-purple) -->
+  <svg viewBox="0 0 1440 600" preserveAspectRatio="none" style="opacity:0.85;">
+    <path d="M0,490 L80,460 L180,475 L280,445 L380,470 L480,440 L600,465 L720,430 L850,455 L960,425 L1080,450 L1200,420 L1340,445 L1440,435 L1440,600 L0,600 Z"
+          fill="#2e2c5a"/>
+  </svg>
+
+  <!-- Cone hills (Moebius signature) — purple cones, left side -->
+  <svg viewBox="0 0 1440 600" preserveAspectRatio="none" style="z-index:1;">
+    <g opacity="0.92">
+      <!-- tall cone -->
+      <path d="M120,470 Q108,300 100,170 Q92,300 80,470 Z" fill="#9080a0" stroke="#1a1830" stroke-width="1.2"/>
+      <!-- shorter cone behind -->
+      <path d="M180,475 Q172,360 165,240 Q158,360 150,475 Z" fill="#8678a0" stroke="#1a1830" stroke-width="1"/>
+      <!-- another small cone -->
+      <path d="M260,480 Q254,420 248,360 Q242,420 236,480 Z" fill="#9888a8" stroke="#1a1830" stroke-width="0.9"/>
+    </g>
+  </svg>
+
+  <!-- Cherry blossom canopies (top puffs) -->
+  <svg viewBox="0 0 1440 600" preserveAspectRatio="none">
+    <g>
+      <!-- Tree A — centre-left, big -->
+      <ellipse cx="560" cy="395" rx="130" ry="58" fill="#f0c8d8" stroke="#1a1830" stroke-width="1"/>
+      <ellipse cx="540" cy="385" rx="60" ry="32" fill="#f4d4dc" opacity="0.85"/>
+      <ellipse cx="600" cy="382" rx="50" ry="26" fill="#f4d4dc" opacity="0.7"/>
+      <path d="M560,440 L560,485" stroke="#d8b8a0" stroke-width="3"/>
+
+      <!-- Tree B — right, smaller -->
+      <ellipse cx="1140" cy="412" rx="78" ry="36" fill="#e8c0d4" stroke="#1a1830" stroke-width="0.9"/>
+      <ellipse cx="1125" cy="404" rx="40" ry="20" fill="#f0d0e0" opacity="0.85"/>
+      <path d="M1140,445 L1140,480" stroke="#d8b8a0" stroke-width="2.5"/>
+
+      <!-- Tree C — far right, small -->
+      <ellipse cx="1310" cy="430" rx="46" ry="22" fill="#e0b8d0" stroke="#1a1830" stroke-width="0.8" opacity="0.9"/>
+      <path d="M1310,448 L1310,478" stroke="#d8b8a0" stroke-width="2"/>
+    </g>
+  </svg>
+</div>
+
+<!-- ─── Grass plain hatching ─── -->
+<div class="grass"></div>
+
+<!-- ─── Mandala overlays ─── -->
+<svg class="mandala" viewBox="-300 -300 600 600">
+  <g fill="none" stroke="#f4ecc8" stroke-width="0.6" opacity="0.6">
+    <circle r="280" stroke-dasharray="2 6"/>
+    <circle r="260" stroke-dasharray="1 14" stroke-width="0.4"/>
+    <g stroke="#f4ecc8" stroke-width="0.5" opacity="0.5">
+      <line x1="0"      y1="-220" x2="129"  y2="68"/>
+      <line x1="129"    y1="68"   x2="-209" y2="-68"/>
+      <line x1="-209"   y1="-68"  x2="209"  y2="-68"/>
+      <line x1="209"    y1="-68"  x2="-129" y2="68"/>
+      <line x1="-129"   y1="68"   x2="0"    y2="-220"/>
+    </g>
+    <circle r="180"/>
+    <circle r="140" stroke-dasharray="4 4"/>
+    <circle r="100" stroke="#7898b8" opacity="0.4"/>
+    <circle r="60"/>
+    <g stroke="#f4ecc8" stroke-width="0.5">
+      <g><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(15)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(30)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(45)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(60)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(75)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(90)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(105)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(120)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(135)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(150)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(165)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(180)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(195)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(210)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(225)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(240)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(255)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(270)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(285)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(300)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(315)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+      <g transform="rotate(330)"><line x1="200" y1="0" x2="220" y2="0"/></g>
+      <g transform="rotate(345)"><line x1="200" y1="0" x2="210" y2="0"/></g>
+    </g>
+  </g>
+</svg>
+
+<svg class="mandala mandala-fast" viewBox="-200 -200 400 400">
+  <g fill="none" stroke="#f0c8d8" stroke-width="0.4" opacity="0.45">
+    <circle r="180" stroke-dasharray="6 10"/>
+    <circle r="120"/>
+    <polygon points="0,-140 133,43 82,113 -82,113 -133,43" stroke-width="0.4"/>
+    <polygon points="0,140 -133,-43 -82,-113 82,-113 133,-43" stroke-width="0.4"/>
+  </g>
+</svg>
+
+<!-- ─── Swallows ─── -->
+<div class="swallow">
+  <svg viewBox="0 0 60 30" fill="none">
+    <!-- Body -->
+    <path d="M6,18 Q14,12 28,14 Q38,15 50,10 Q44,16 38,16 Q40,18 36,20 Q44,21 50,20"
+          stroke="#1a1830" stroke-width="1" fill="#7898b8"/>
+    <!-- Wing -->
+    <path d="M22,14 Q26,8 34,5 Q30,11 28,15 Z" fill="#d8c878" stroke="#1a1830" stroke-width="0.7"/>
+    <!-- Tail -->
+    <path d="M48,12 L56,10 L52,15 L56,16 Z" fill="#7898b8" stroke="#1a1830" stroke-width="0.7"/>
+  </svg>
+</div>
+<div class="swallow swallow-2">
+  <svg viewBox="0 0 60 30" fill="none">
+    <path d="M6,18 Q14,12 28,14 Q38,15 50,10 Q44,16 38,16 Q40,18 36,20 Q44,21 50,20"
+          stroke="#1a1830" stroke-width="1" fill="#a8b8d8"/>
+    <path d="M22,14 Q26,8 34,5 Q30,11 28,15 Z" fill="#e8d888" stroke="#1a1830" stroke-width="0.7"/>
+    <path d="M48,12 L56,10 L52,15 L56,16 Z" fill="#a8b8d8" stroke="#1a1830" stroke-width="0.7"/>
+  </svg>
+</div>
+
+<!-- ─── Sakura petal layer (filled by JS) ─── -->
+<div id="petal-layer"></div>
+
+<nav>
+  <div class="mark">
+    <span class="ear">👂</span><span class="glitch" data-text="XIAOER">XIAOER</span> &nbsp;·&nbsp;
+    <span style="font-style: normal; font-size: 13px; opacity: 0.7;">五馆</span>
+  </div>
+  <div class="meta">PENTAGRAM &nbsp;·&nbsp; v4 LUNAR</div>
+</nav>
+
+<div class="corner-meta">
+  <div><span class="label">N°</span> 01 — 05</div>
+  <div><span class="label">FIELD</span> moonlit-plain</div>
+  <div><span class="label">BUILD</span> 26.05.12</div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="pentagon" id="pentagon">
+
+    <a class="door d1" href="https://city-threejs.vercel.app" target="_blank" rel="noopener" data-y="0">
+      <span class="door-hatch"></span>
+      <span class="door-mark"></span>
+      <div class="door-inner">
+        <div class="door-num">01</div>
+        <div class="door-icon">🏙️</div>
+        <div>
+          <div class="door-zh">城市馆</div>
+          <div class="door-en">City</div>
+        </div>
+        <div class="door-cta">Enter</div>
+      </div>
+    </a>
+
+    <a class="door d2" href="https://dance-beta.vercel.app" target="_blank" rel="noopener" data-y="72">
+      <span class="door-hatch"></span>
+      <span class="door-mark"></span>
+      <div class="door-inner">
+        <div class="door-num">02</div>
+        <div class="door-icon">💃</div>
+        <div>
+          <div class="door-zh">跳舞馆</div>
+          <div class="door-en">Dance</div>
+        </div>
+        <div class="door-cta">Enter</div>
+      </div>
+    </a>
+
+    <a class="door d3" href="https://ai-mvp-psi.vercel.app" target="_blank" rel="noopener" data-y="144">
+      <span class="door-hatch"></span>
+      <span class="door-mark"></span>
+      <div class="door-inner">
+        <div class="door-num">03</div>
+        <div class="door-icon">🎭</div>
+        <div>
+          <div class="door-zh">居家馆</div>
+          <div class="door-en">Home</div>
+        </div>
+        <div class="door-cta">Enter</div>
+      </div>
+    </a>
+
+    <a class="door d4" href="https://headshot-psi-indol.vercel.app" target="_blank" rel="noopener" data-y="216">
+      <span class="door-hatch"></span>
+      <span class="door-mark"></span>
+      <div class="door-inner">
+        <div class="door-num">04</div>
+        <div class="door-icon">👔</div>
+        <div>
+          <div class="door-zh">肖像馆</div>
+          <div class="door-en">Portrait</div>
+        </div>
+        <div class="door-cta">Enter</div>
+      </div>
+    </a>
+
+    <a class="door d5" href="https://camera-museum-nine.vercel.app" target="_blank" rel="noopener" data-y="288">
+      <span class="door-hatch"></span>
+      <span class="door-mark"></span>
+      <div class="door-inner">
+        <div class="door-num">05</div>
+        <div class="door-icon">🎞️</div>
+        <div>
+          <div class="door-zh">相机馆</div>
+          <div class="door-en">Camera</div>
+        </div>
+        <div class="door-cta">Enter</div>
+      </div>
+    </a>
+
+  </div>
+  <div class="core-ring"></div>
+  <div class="core"></div>
+</div>
+
+<div class="side-meta">
+  <div class="row">五馆 · five rooms <span class="dot"></span></div>
+  <div>by Jane · @xiaoerzhan</div>
+</div>
+
+<div class="hud">
+  <span class="hint-key">DRAG</span> rotate &nbsp;·&nbsp; <span class="hint-key">CLICK</span> enter
+</div>
+
+<script>
+(function () {
+  const pentagon = document.getElementById('pentagon');
+  const stage    = document.getElementById('stage');
+
+  let rotation = 0, velocity = 0, tilt = -8;
+  let dragging = false, lastX = 0, lastY = 0, lastTime = 0;
+  let lastInteractTime = performance.now() + 1400;
+  const IDLE_THRESHOLD_MS = 2500;
+  const AUTO_SPEED = 0.06;
+
+  function applyTransform() {
+    pentagon.style.setProperty('--rotation', rotation + 'deg');
+    pentagon.style.setProperty('--tilt',     tilt     + 'deg');
+  }
+  applyTransform();
+
+  function onDragStart(e) {
+    dragging = true;
+    document.documentElement.classList.add('dragging');
+    const p = e.touches ? e.touches[0] : e;
+    lastX = p.clientX; lastY = p.clientY; lastTime = performance.now(); velocity = 0;
+  }
+  function onDragMove(e) {
+    if (!dragging) return;
+    const p = e.touches ? e.touches[0] : e;
+    const dx = p.clientX - lastX, dy = p.clientY - lastY;
+    const now = performance.now(), dt = Math.max(now - lastTime, 1);
+    rotation += dx * 0.4;
+    tilt = Math.max(-30, Math.min(15, tilt - dy * 0.15));
+    velocity = (dx * 0.4) / (dt / 16);
+    lastX = p.clientX; lastY = p.clientY; lastTime = now;
+    lastInteractTime = now;
+    applyTransform();
+  }
+  function onDragEnd() {
+    if (!dragging) return;
+    dragging = false;
+    document.documentElement.classList.remove('dragging');
+  }
+  stage.addEventListener('mousedown',  onDragStart);
+  window.addEventListener('mousemove', onDragMove);
+  window.addEventListener('mouseup',   onDragEnd);
+  stage.addEventListener('touchstart', onDragStart, { passive: true });
+  window.addEventListener('touchmove', onDragMove,  { passive: true });
+  window.addEventListener('touchend',  onDragEnd);
+
+  document.querySelectorAll('.door').forEach((door) => {
+    let dx0 = 0, dy0 = 0;
+    door.addEventListener('mousedown', (e) => { dx0 = e.clientX; dy0 = e.clientY; });
+    door.addEventListener('click', (e) => {
+      const dx = Math.abs(e.clientX - dx0), dy = Math.abs(e.clientY - dy0);
+      if (dx > 5 || dy > 5) { e.preventDefault(); return; }
+      e.preventDefault();
+      const y = door.dataset.y || '0';
+      door.style.setProperty('--y-base', y + 'deg');
+      door.classList.add('opening');
+      const href = door.href;
+      setTimeout(() => {
+        window.open(href, '_blank', 'noopener');
+        setTimeout(() => door.classList.remove('opening'), 800);
+      }, 480);
+    });
+  });
+
+  function tick() {
+    const now = performance.now();
+    if (!dragging) {
+      if (Math.abs(velocity) > 0.02) {
+        rotation += velocity; velocity *= 0.94; lastInteractTime = now;
+      } else if (now - lastInteractTime > IDLE_THRESHOLD_MS) {
+        rotation += AUTO_SPEED;
+      }
+      if (Math.abs(tilt - (-8)) > 0.05 && now - lastInteractTime > IDLE_THRESHOLD_MS) {
+        tilt += ((-8) - tilt) * 0.02;
+      }
+      applyTransform();
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    tilt = Math.max(-30, Math.min(15, tilt + e.deltaY * 0.05));
+    lastInteractTime = performance.now();
+    applyTransform();
+  }, { passive: false });
+
+  // ─── Sakura petals ───
+  const petalLayer = document.getElementById('petal-layer');
+  const PETAL_COLORS = ['#f0c8d8', '#f4d4dc', '#e8c0d0', '#f0d0e0'];
+  function spawnPetal() {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    const color = PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)];
+    p.innerHTML = `<svg viewBox="0 0 14 10" width="14" height="10">
+      <ellipse cx="7" cy="5" rx="6.5" ry="3.2" fill="${color}" stroke="#1a1830" stroke-width="0.4" opacity="0.85"/>
+    </svg>`;
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.animationDuration = (12 + Math.random() * 8) + 's';
+    p.style.opacity = '0';
+    petalLayer.appendChild(p);
+    setTimeout(() => p.remove(), 22000);
+  }
+  for (let i = 0; i < 8; i++) setTimeout(spawnPetal, i * 1500);
+  setInterval(spawnPetal, 1800);
+})();
+</script>
+
+</body>
+</html>
