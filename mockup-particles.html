@@ -303,62 +303,132 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-// ─── Five rooms × five distinct shapes × five vivid colours ──
+// ─── Five rooms × five visually-distinct shapes × five vivid colours ──
 const N = 14000;
 const ROOMS = [
-  { num:'01', zh:'城市馆', en:'City',     color:0x3a90ff, shape:'cube',      url:'https://city-threejs.vercel.app' },
-  { num:'02', zh:'跳舞馆', en:'Dance',    color:0xff4a8a, shape:'tetra',     url:'https://dance-beta.vercel.app' },
-  { num:'03', zh:'居家馆', en:'Home',     color:0xffc63a, shape:'torus',     url:'https://ai-mvp-psi.vercel.app' },
-  { num:'04', zh:'肖像馆', en:'Portrait', color:0x3aeab0, shape:'sphere',    url:'https://headshot-psi-indol.vercel.app' },
-  { num:'05', zh:'相机馆', en:'Camera',   color:0xff7c3a, shape:'torusKnot', url:'https://camera-museum-nine.vercel.app' },
+  { num:'01', zh:'城市馆', en:'City',     color:0x3a90ff, shape:'cube',   url:'https://city-threejs.vercel.app' },
+  { num:'02', zh:'跳舞馆', en:'Dance',    color:0xff4a8a, shape:'cone',   url:'https://dance-beta.vercel.app' },
+  { num:'03', zh:'居家馆', en:'Home',     color:0xffc63a, shape:'house',  url:'https://ai-mvp-psi.vercel.app' },
+  { num:'04', zh:'肖像馆', en:'Portrait', color:0x3aeab0, shape:'sphere', url:'https://headshot-psi-indol.vercel.app' },
+  { num:'05', zh:'相机馆', en:'Camera',   color:0xff7c3a, shape:'torus',  url:'https://camera-museum-nine.vercel.app' },
 ];
 
-// Tiny SVG wireframes for the dock icons
+// Tiny SVG wireframes for the dock icons (match the 3D shape)
 const ICON_SVG = {
-  cube:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg>',
-  tetra:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l9 17H3z"/><path d="M12 3l-5 17M12 3l5 17"/></svg>',
-  torus:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)" opacity="0.5"/></svg>',
-  sphere:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="3.5" ry="9"/></svg>',
-  torusKnot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M5 10c4-5 10 1 7 6s-9-1-7-6 12-2 10 5-9 5-10 1"/></svg>',
+  cube:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg>',
+  cone:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3 L21 19 H3 Z"/><ellipse cx="12" cy="19" rx="9" ry="2" fill="none"/></svg>',
+  house:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 11 L12 4 L20 11 V20 H4 Z"/><path d="M10 20 V14 H14 V20"/></svg>',
+  sphere: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="3.5" ry="9"/></svg>',
+  torus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="5" ry="2.2"/></svg>',
 };
+
+// House shape: 5-sided pitched-roof silhouette extruded into 3D
+function makeHouseGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(-1.0, -1.2);
+  shape.lineTo( 1.0, -1.2);
+  shape.lineTo( 1.0,  0.3);
+  shape.lineTo( 0.0,  1.4);  // roof peak
+  shape.lineTo(-1.0,  0.3);
+  shape.closePath();
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: 1.6,
+    bevelEnabled: true,
+    bevelThickness: 0.06,
+    bevelSize: 0.06,
+    bevelSegments: 2,
+    curveSegments: 12,
+  });
+  geo.translate(0, 0, -0.8);   // re-centre depth
+  geo.scale(1.05, 1.05, 1.05);
+  return geo;
+}
 
 function makeGeometry(name) {
   switch (name) {
-    case 'cube':      return new THREE.BoxGeometry(2.4, 2.4, 2.4, 14, 14, 14);
-    case 'tetra':     return new THREE.TetrahedronGeometry(2.0, 6);
-    case 'torus':     return new THREE.TorusGeometry(1.4, 0.5, 32, 96);
-    case 'sphere':    return new THREE.SphereGeometry(1.7, 64, 48);
-    case 'torusKnot': return new THREE.TorusKnotGeometry(1.2, 0.35, 200, 24, 2, 3);
-    default:          return new THREE.SphereGeometry(1.6, 32, 32);
+    case 'cube':   return new THREE.BoxGeometry(2.4, 2.4, 2.4, 14, 14, 14);
+    case 'cone':   { const g = new THREE.ConeGeometry(1.4, 2.6, 48, 12); g.translate(0, -0.2, 0); return g; }
+    case 'house':  return makeHouseGeometry();
+    case 'sphere': return new THREE.SphereGeometry(1.7, 64, 48);
+    case 'torus':  { const g = new THREE.TorusGeometry(1.5, 0.5, 32, 96); g.rotateX(Math.PI * 0.32); return g; }
+    default:       return new THREE.SphereGeometry(1.6, 32, 32);
   }
 }
 
+// Sample N points on the surface AND sort them by (y-band, angular position).
+// This is the key to a stable morph: particle index i represents roughly the
+// same "spatial slot" across all shapes, so when we morph from A→B, particle i
+// moves to a nearby spot rather than flying across the whole scene.
 function sampleGeometry(geom, count) {
   const m = new THREE.Mesh(geom, new THREE.MeshBasicMaterial());
   m.updateMatrixWorld(true);
   const sampler = new MeshSurfaceSampler(m).build();
-  const arr = new Float32Array(count * 3);
+
+  // 1. sample raw points
+  const raw = [];
   const tmp = new THREE.Vector3();
   for (let i = 0; i < count; i++) {
     sampler.sample(tmp);
-    arr[i*3+0] = tmp.x;
-    arr[i*3+1] = tmp.y;
-    arr[i*3+2] = tmp.z;
+    raw.push([tmp.x, tmp.y, tmp.z]);
   }
-  return arr;
+
+  // 2. compute y-band + angle for each point
+  // bin count tuned so each band has ~count/24 points
+  const BANDS = 24;
+  // find y range
+  let yMin = Infinity, yMax = -Infinity;
+  for (const p of raw) { if (p[1] < yMin) yMin = p[1]; if (p[1] > yMax) yMax = p[1]; }
+  const yRange = (yMax - yMin) || 1;
+
+  const tuples = raw.map(([x, y, z]) => ({
+    x, y, z,
+    band:  Math.min(BANDS - 1, Math.floor(((y - yMin) / yRange) * BANDS)),
+    angle: Math.atan2(z, x),
+  }));
+
+  // 3. sort: ascending band, then ascending angle within band
+  tuples.sort((a, b) => (a.band - b.band) || (a.angle - b.angle));
+
+  const out = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    out[i*3+0] = tuples[i].x;
+    out[i*3+1] = tuples[i].y;
+    out[i*3+2] = tuples[i].z;
+  }
+  return out;
 }
 
-// ─── Initial nebula (scattered white) ────────────────────────
-const nebula = new Float32Array(N * 3);
-for (let i = 0; i < N; i++) {
-  // soft spherical nebula with thicker centre
-  const r = Math.cbrt(Math.random()) * 3.5;
-  const theta = Math.random() * Math.PI * 2;
-  const phi   = Math.acos(2 * Math.random() - 1);
-  nebula[i*3+0] = r * Math.sin(phi) * Math.cos(theta);
-  nebula[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-  nebula[i*3+2] = r * Math.cos(phi);
-}
+// ─── Initial nebula (scattered white) — sorted the SAME way as shapes ────
+const nebula = (function buildNebula() {
+  const raw = [];
+  for (let i = 0; i < N; i++) {
+    const r = Math.cbrt(Math.random()) * 3.5;
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.acos(2 * Math.random() - 1);
+    raw.push([
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.sin(phi) * Math.sin(theta),
+      r * Math.cos(phi),
+    ]);
+  }
+  const BANDS = 24;
+  let yMin = Infinity, yMax = -Infinity;
+  for (const p of raw) { if (p[1] < yMin) yMin = p[1]; if (p[1] > yMax) yMax = p[1]; }
+  const yRange = (yMax - yMin) || 1;
+  const tuples = raw.map(([x, y, z]) => ({
+    x, y, z,
+    band:  Math.min(BANDS - 1, Math.floor(((y - yMin) / yRange) * BANDS)),
+    angle: Math.atan2(z, x),
+  }));
+  tuples.sort((a, b) => (a.band - b.band) || (a.angle - b.angle));
+  const out = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    out[i*3+0] = tuples[i].x;
+    out[i*3+1] = tuples[i].y;
+    out[i*3+2] = tuples[i].z;
+  }
+  return out;
+})();
 
 const targets = ROOMS.map(r => sampleGeometry(makeGeometry(r.shape), N));
 
@@ -422,17 +492,25 @@ const material = new THREE.ShaderMaterial({
     varying float vNoise;
     varying float vProgress;
 
+    // Shared-axis curl: all particles bow around the SAME axis (mostly Y with a
+    // slight Z lean) — keeps the swarm coherent instead of every particle flying
+    // off in its own random direction. Magnitude per particle still varies, so
+    // it doesn't look like a rigid rotation.
     vec3 curlOffset(vec3 a, vec3 b, float t, float seed) {
       vec3 mid = mix(a, b, 0.5);
-      vec3 axis = normalize(vec3(sin(seed*6.28), cos(seed*4.7), sin(seed*9.1)));
-      vec3 perp = normalize(cross(b - a + vec3(0.001), axis)) * length(b - a) * 0.28;
-      float arc = sin(t * 3.14159) * (0.4 + 0.6 * seed);
+      vec3 sharedAxis = normalize(vec3(0.0, 1.0, 0.25));
+      vec3 dir  = b - a + vec3(0.0001);
+      vec3 perp = normalize(cross(dir, sharedAxis)) * length(dir) * 0.10; // was 0.28
+      // small per-particle variation so it's not a stiff orbit
+      float arc = sin(t * 3.14159) * (0.55 + 0.45 * seed);
       return mid + perp * arc;
     }
 
     void main() {
-      float p = clamp((uProgress - aRandom * 0.32) / 0.68, 0.0, 1.0);
-      p = p * p * (3.0 - 2.0 * p);
+      // Tighter stagger band: 0.20 (was 0.32) — particles arrive closer together
+      float p = clamp((uProgress - aRandom * 0.20) / 0.80, 0.0, 1.0);
+      // smoother ease (smootherstep)
+      p = p * p * p * (p * (p * 6.0 - 15.0) + 10.0);
       vProgress = p;
 
       vec3 mid = curlOffset(aTargetA, aTargetB, p, aRandom);
@@ -442,8 +520,9 @@ const material = new THREE.ShaderMaterial({
         p
       );
 
-      // idle drift + breathing
-      float drift = mix(0.06, 0.018, 1.0 - uIdle);
+      // Idle drift only when actually idle (uIdle near 1); strongly suppressed
+      // while formed into a shape so the shape stays readable.
+      float drift = uIdle * 0.06;
       pos += vec3(
         sin(uTime * 0.7 + aRandom * 18.0),
         cos(uTime * 0.9 + aRandom * 24.0),
@@ -532,7 +611,7 @@ let currentIdx = -1;       // -1 = idle nebula
 let targetIdx  = -1;
 let morphStart = 0;
 let morphing   = false;
-const MORPH_DURATION = 1.6;
+const MORPH_DURATION = 2.2;   // longer = more stable feel
 
 const labelEl     = document.getElementById('label');
 const idleHintEl  = document.getElementById('idleHint');
@@ -664,8 +743,9 @@ function animate() {
   const elapsed = clock.getElapsedTime();
   uniforms.uTime.value = elapsed;
 
-  // base auto-rotate (slow, always present)
-  baseRotY += 0.0015;
+  // Base auto-rotate freezes during a morph so the swarm doesn't appear to
+  // "chase" itself. Picks back up once the shape has fully formed.
+  if (!morphing) baseRotY += 0.0015;
   const rotY = baseRotY + userRotY;
   const rotX = baseRotX + userRotX;
   points.rotation.y = rotY;
