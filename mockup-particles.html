@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>小耳 · 粒子 hub mockup</title>
+<title>小耳 · 五馆 · 粒子选择</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Cutive+Mono&family=Noto+Serif+SC:wght@300;500&display=swap" rel="stylesheet">
 
@@ -11,158 +11,244 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
     height: 100%; overflow: hidden;
-    background: #1a1830;
-    color: #f4ecd8;
+    background: #000;
+    color: #fff;
     font-family: "Cutive Mono", monospace;
     user-select: none;
     -webkit-font-smoothing: antialiased;
   }
-
-  /* Background gradient (same Moebius night vibe) */
   body::before {
     content: "";
     position: fixed; inset: 0;
     background:
-      radial-gradient(ellipse 50% 35% at 50% 18%, rgba(244, 236, 200, 0.16), transparent 60%),
-      radial-gradient(ellipse 80% 50% at 30% 80%, rgba(160, 168, 200, 0.14), transparent 70%),
-      linear-gradient(180deg, #1a1830 0%, #2a2858 28%, #3e3c78 55%, #5a5898 100%);
-    z-index: 0;
-    pointer-events: none;
+      radial-gradient(ellipse 60% 50% at 50% 50%, rgba(40, 30, 70, 0.35), transparent 70%),
+      #050308;
+    z-index: 0; pointer-events: none;
   }
   body::after {
     content: "";
     position: fixed; inset: 0;
     background-image:
-      radial-gradient(1px 1px at 10% 8%,   rgba(244,236,200,0.9), transparent),
-      radial-gradient(1px 1px at 25% 18%,  rgba(244,236,200,0.7), transparent),
-      radial-gradient(1px 1px at 42% 6%,   rgba(244,236,200,0.8), transparent),
-      radial-gradient(1px 1px at 72% 10%,  rgba(244,236,200,0.85), transparent),
-      radial-gradient(1px 1px at 88% 22%,  rgba(244,236,200,0.7), transparent),
-      radial-gradient(1.5px 1.5px at 15% 28%, rgba(244,236,200,0.9), transparent),
-      radial-gradient(1px 1px at 64% 26%,  rgba(244,236,200,0.7), transparent),
-      radial-gradient(1px 1px at 80% 4%,   rgba(244,236,200,0.95), transparent);
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 78% 14%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 34% 76%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 88% 70%, rgba(255,255,255,0.45), transparent),
+      radial-gradient(1px 1px at 56% 88%, rgba(255,255,255,0.3), transparent);
     z-index: 0; pointer-events: none;
+    opacity: 0.6;
   }
 
-  #c { position: fixed; inset: 0; z-index: 1; cursor: grab; }
+  #c {
+    position: fixed; inset: 0;
+    z-index: 1;
+    cursor: grab;
+  }
   html.dragging #c { cursor: grabbing; }
+  #c.committed { cursor: pointer; }
 
-  /* HUD overlay */
+  /* ─── Top mark ─── */
   nav {
     position: fixed; top: 0; left: 0; right: 0;
     display: flex; justify-content: space-between; align-items: center;
-    padding: 20px 32px;
+    padding: 22px 36px;
     z-index: 10; pointer-events: none;
   }
   nav .mark {
     font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500;
     font-size: 20px; letter-spacing: 0.06em;
+    text-shadow: 0 0 24px rgba(255,255,255,0.3);
   }
   nav .mark .ear { margin-right: 6px; }
+  nav .mark::before { content: "·"; margin-right: 8px; opacity: 0.6; }
   nav .meta {
-    font-size: 10px; letter-spacing: 0.3em; color: rgba(244,236,216,0.55);
+    font-size: 10px; letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.4);
     text-transform: uppercase;
   }
 
-  .room-label {
+  /* ─── Centre label (the room name) ─── */
+  .centre-label {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, calc(-50% - 220px));
+    z-index: 5;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .centre-label.dim { opacity: 0.35; }
+  .centre-label .num {
+    font-size: 10px;
+    letter-spacing: 0.7em;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 10px;
+  }
+  .centre-label .zh {
+    font-family: "Noto Serif SC", serif;
+    font-weight: 300;
+    font-size: 38px;
+    letter-spacing: 0.3em;
+    color: #fff;
+    text-shadow:
+      0 0 8px var(--accent-glow, rgba(255,255,255,0.25)),
+      0 0 30px var(--accent-glow, rgba(255,255,255,0.18));
+    transition: color 0.8s ease, text-shadow 0.8s ease;
+  }
+  .centre-label .en {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    color: var(--accent, #fff);
+    margin-top: 6px;
+    transition: color 0.8s ease;
+  }
+
+  /* ─── Initial idle hint ─── */
+  .idle-hint {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, calc(-50% - 220px));
+    z-index: 5;
+    pointer-events: none;
+    text-align: center;
+    transition: opacity 0.6s ease;
+  }
+  .idle-hint .label {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 22px;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.1em;
+  }
+  .idle-hint .sub {
+    font-family: "Cutive Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+  .idle-hint.hidden { opacity: 0; }
+
+  /* ─── Bottom selector dock ─── */
+  .dock {
     position: fixed;
     left: 50%; bottom: 56px;
     transform: translateX(-50%);
     z-index: 10;
-    text-align: center;
-    pointer-events: none;
-  }
-  .room-label .num {
-    font-size: 10px;
-    letter-spacing: 0.6em;
-    color: rgba(244,236,216,0.45);
-    margin-bottom: 6px;
-  }
-  .room-label .name-zh {
-    font-family: "Noto Serif SC", "Cormorant Garamond", serif;
-    font-size: 42px; font-weight: 300;
-    letter-spacing: 0.25em;
-    color: var(--accent, #f4ecc8);
-    text-shadow: 0 0 24px var(--accent-glow, rgba(244,236,200,0.4));
-    transition: color 1s ease, text-shadow 1s ease;
-  }
-  .room-label .name-en {
-    font-family: "Cormorant Garamond", serif; font-style: italic;
-    font-size: 14px; letter-spacing: 0.15em;
-    color: var(--accent, #f4ecc8);
-    opacity: 0.7;
-    margin-top: 4px;
-    transition: color 1s ease;
-  }
-  .room-label.fade-out { animation: labelOut 1s ease forwards; }
-  .room-label.fade-in  { animation: labelIn  1s ease forwards; }
-  @keyframes labelOut { to { opacity: 0; transform: translate(-50%, 6px); } }
-  @keyframes labelIn  { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translateX(-50%); } }
-
-  .room-cta {
-    margin-top: 18px;
-    display: inline-block;
-    pointer-events: auto;
-    cursor: pointer;
-    font-family: "Cutive Mono", monospace;
-    font-size: 11px; letter-spacing: 0.4em;
-    text-transform: uppercase;
-    padding: 8px 22px;
-    border: 1px solid var(--accent, #f4ecc8);
-    color: var(--accent, #f4ecc8);
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 18px 28px;
+    border: 1px solid rgba(255,255,255,0.10);
     border-radius: 100px;
-    background: rgba(26,24,48,0.4);
-    backdrop-filter: blur(6px);
-    transition: all 0.4s ease;
+    background: rgba(10, 8, 18, 0.55);
+    backdrop-filter: blur(12px);
   }
-  .room-cta:hover {
-    background: var(--accent, #f4ecc8);
-    color: #1a1830;
-    letter-spacing: 0.55em;
+  .dock-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    pointer-events: auto;
+    opacity: 0.55;
+  }
+  .dock-btn:hover  { opacity: 1; }
+  .dock-btn.active { opacity: 1; transform: translateY(-6px); }
+  .dock-btn .ico {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--c, #fff);
+    filter: drop-shadow(0 0 6px var(--g, transparent));
+    transition: color 0.4s, filter 0.4s;
+  }
+  .dock-btn.active .ico { filter: drop-shadow(0 0 14px var(--g, transparent)); }
+  .dock-btn .label {
+    font-family: "Cutive Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+  }
+  .dock-btn.active .label { color: var(--c, #fff); }
+
+  .dock-divider {
+    width: 1px; height: 22px;
+    background: rgba(255,255,255,0.12);
   }
 
-  .hud {
-    position: fixed; left: 50%; top: 18px;
-    transform: translateX(-50%);
-    z-index: 10;
-    font-size: 10px; letter-spacing: 0.4em; text-transform: uppercase;
-    color: rgba(244,236,216,0.45);
-    pointer-events: none;
-  }
-
-  .progress {
+  /* ─── Confirm button (appears when something is selected) ─── */
+  .confirm {
     position: fixed;
-    left: 50%; top: 36px;
+    left: 50%; bottom: 160px;
     transform: translateX(-50%);
     z-index: 10;
-    display: flex; gap: 10px;
+    padding: 11px 32px;
+    border: 1px solid var(--accent, #fff);
+    border-radius: 100px;
+    background: rgba(10, 8, 18, 0.4);
+    backdrop-filter: blur(10px);
+    color: var(--accent, #fff);
+    font-family: "Cutive Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    cursor: pointer;
+    opacity: 0;
     pointer-events: none;
+    transition: all 0.5s ease;
   }
-  .progress .pip {
-    width: 18px; height: 1.5px;
-    background: rgba(244,236,216,0.25);
-    transition: background 0.5s, width 0.5s;
+  .confirm.visible {
+    opacity: 1;
+    pointer-events: auto;
   }
-  .progress .pip.active {
-    background: var(--accent, #f4ecc8);
-    width: 28px;
+  .confirm:hover {
+    background: var(--accent, #fff);
+    color: #000;
+    letter-spacing: 0.65em;
+    box-shadow: 0 0 30px var(--accent-glow, rgba(255,255,255,0.4));
+  }
+  .confirm::before, .confirm::after { content: "—"; opacity: 0.5; margin: 0 8px; }
+
+  /* ─── HUD bits ─── */
+  .hud-top {
+    position: fixed; left: 50%; top: 22px;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-size: 10px; letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    pointer-events: none;
   }
 
   .side-hint {
     position: fixed;
-    right: 28px; bottom: 28px;
+    right: 32px; bottom: 32px;
     z-index: 10;
-    font-size: 9px; letter-spacing: 0.3em;
-    color: rgba(244,236,216,0.4);
+    font-size: 9px; letter-spacing: 0.25em;
+    color: rgba(255,255,255,0.4);
     text-transform: uppercase;
     pointer-events: none;
     text-align: right;
-    line-height: 1.8;
+    line-height: 2;
   }
   .side-hint .key {
-    border: 1px solid rgba(244,236,216,0.25);
-    padding: 2px 7px; margin: 0 4px;
-    color: rgba(244,236,216,0.6);
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 2px 6px; margin: 0 3px;
+    color: rgba(255,255,255,0.65);
+    border-radius: 2px;
+  }
+
+  @media (max-width: 700px) {
+    .centre-label .zh { font-size: 28px; }
+    .centre-label, .idle-hint { transform: translate(-50%, calc(-50% - 160px)); }
+    .dock { gap: 14px; padding: 14px 18px; }
+    .dock-divider { display: none; }
+    .dock-btn .label { display: none; }
+    .side-hint { display: none; }
   }
 </style>
 </head>
@@ -172,24 +258,32 @@
 
 <nav>
   <div class="mark"><span class="ear">👂</span><span style="font-style:italic">XIAOER</span> · 五馆</div>
-  <div class="meta">PARTICLE MOCKUP &middot; v0</div>
+  <div class="meta">PARTICLE SELECT &middot; v0</div>
 </nav>
 
-<div class="hud">5 FORMS · 5 ROOMS</div>
-<div class="progress" id="progress">
-  <span class="pip active"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+<div class="hud-top">CHOOSE A ROOM</div>
+
+<div class="idle-hint" id="idleHint">
+  <div class="label">— 选一个馆 —</div>
+  <div class="sub">arrow keys · scroll · or click below</div>
 </div>
 
-<div class="room-label" id="label">
-  <div class="num" id="num">— 01 —</div>
-  <div class="name-zh" id="name-zh">城市馆</div>
-  <div class="name-en" id="name-en">City</div>
-  <a class="room-cta" id="cta" href="#">Enter →</a>
+<div class="centre-label" id="label" style="opacity:0">
+  <div class="num">— 01 —</div>
+  <div class="zh">城市馆</div>
+  <div class="en">City</div>
 </div>
+
+<div class="dock" id="dock">
+  <!-- five buttons injected by JS -->
+</div>
+
+<button class="confirm" id="confirm">Enter</button>
 
 <div class="side-hint">
-  <div><span class="key">DRAG</span> rotate</div>
-  <div><span class="key">SPACE</span> next</div>
+  <div><span class="key">← →</span> select</div>
+  <div><span class="key">Enter</span> confirm</div>
+  <div><span class="key">Esc</span> back</div>
 </div>
 
 <script type="importmap">
@@ -203,108 +297,99 @@
 
 <script type="module">
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-// ── Scene setup ─────────────────────────────────────────────
-const canvas = document.getElementById('c');
-const scene = new THREE.Scene();
+// ─── Five rooms × five distinct shapes × five vivid colours ──
+const N = 14000;
+const ROOMS = [
+  { num:'01', zh:'城市馆', en:'City',     color:0x3a90ff, shape:'cube',      url:'https://city-threejs.vercel.app' },
+  { num:'02', zh:'跳舞馆', en:'Dance',    color:0xff4a8a, shape:'tetra',     url:'https://dance-beta.vercel.app' },
+  { num:'03', zh:'居家馆', en:'Home',     color:0xffc63a, shape:'torus',     url:'https://ai-mvp-psi.vercel.app' },
+  { num:'04', zh:'肖像馆', en:'Portrait', color:0x3aeab0, shape:'sphere',    url:'https://headshot-psi-indol.vercel.app' },
+  { num:'05', zh:'相机馆', en:'Camera',   color:0xff7c3a, shape:'torusKnot', url:'https://camera-museum-nine.vercel.app' },
+];
 
+// Tiny SVG wireframes for the dock icons
+const ICON_SVG = {
+  cube:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg>',
+  tetra:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l9 17H3z"/><path d="M12 3l-5 17M12 3l5 17"/></svg>',
+  torus:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)" opacity="0.5"/></svg>',
+  sphere:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="3.5" ry="9"/></svg>',
+  torusKnot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M5 10c4-5 10 1 7 6s-9-1-7-6 12-2 10 5-9 5-10 1"/></svg>',
+};
+
+function makeGeometry(name) {
+  switch (name) {
+    case 'cube':      return new THREE.BoxGeometry(2.4, 2.4, 2.4, 14, 14, 14);
+    case 'tetra':     return new THREE.TetrahedronGeometry(2.0, 6);
+    case 'torus':     return new THREE.TorusGeometry(1.4, 0.5, 32, 96);
+    case 'sphere':    return new THREE.SphereGeometry(1.7, 64, 48);
+    case 'torusKnot': return new THREE.TorusKnotGeometry(1.2, 0.35, 200, 24, 2, 3);
+    default:          return new THREE.SphereGeometry(1.6, 32, 32);
+  }
+}
+
+function sampleGeometry(geom, count) {
+  const m = new THREE.Mesh(geom, new THREE.MeshBasicMaterial());
+  m.updateMatrixWorld(true);
+  const sampler = new MeshSurfaceSampler(m).build();
+  const arr = new Float32Array(count * 3);
+  const tmp = new THREE.Vector3();
+  for (let i = 0; i < count; i++) {
+    sampler.sample(tmp);
+    arr[i*3+0] = tmp.x;
+    arr[i*3+1] = tmp.y;
+    arr[i*3+2] = tmp.z;
+  }
+  return arr;
+}
+
+// ─── Initial nebula (scattered white) ────────────────────────
+const nebula = new Float32Array(N * 3);
+for (let i = 0; i < N; i++) {
+  // soft spherical nebula with thicker centre
+  const r = Math.cbrt(Math.random()) * 3.5;
+  const theta = Math.random() * Math.PI * 2;
+  const phi   = Math.acos(2 * Math.random() - 1);
+  nebula[i*3+0] = r * Math.sin(phi) * Math.cos(theta);
+  nebula[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+  nebula[i*3+2] = r * Math.cos(phi);
+}
+
+const targets = ROOMS.map(r => sampleGeometry(makeGeometry(r.shape), N));
+
+// ─── Scene + renderer + bloom ────────────────────────────────
+const canvas = document.getElementById('c');
+const scene  = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
-camera.position.set(0, 0, 6);
+camera.position.set(0, 0, 7);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 0);
 
-// Post-processing (bloom for glow)
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.85, 0.5, 0.05);
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.0, 0.55, 0.04);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-// Orbit (drag rotate)
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.enableZoom = false;
-controls.enablePan = false;
-controls.rotateSpeed = 0.6;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 0.6;
+// ─── Particle geometry + shader ──────────────────────────────
+const positions = new Float32Array(N * 3);
+const targetA   = new Float32Array(N * 3);
+const targetB   = new Float32Array(N * 3);
+const random    = new Float32Array(N);
 
-document.documentElement.addEventListener('mousedown', () => document.documentElement.classList.add('dragging'));
-window.addEventListener('mouseup', () => document.documentElement.classList.remove('dragging'));
-
-// ── Rooms config ────────────────────────────────────────────
-const N = 12000;  // particle count
-const ROOMS = [
-  { num: '01', zh: '城市馆',   en: 'City',    color: 0x7898b8, geo: 'cube',         url: 'https://city-threejs.vercel.app' },
-  { num: '02', zh: '跳舞馆',   en: 'Dance',   color: 0xf0c8d8, geo: 'octahedron',   url: 'https://dance-beta.vercel.app' },
-  { num: '03', zh: '挂画馆',   en: 'Gallery', color: 0xf4ecc8, geo: 'dodecahedron', url: 'https://ai-mvp-psi.vercel.app' },
-  { num: '04', zh: '肖像馆',   en: 'Portrait',color: 0x9080a0, geo: 'icosahedron',  url: 'https://headshot-psi-indol.vercel.app' },
-  { num: '05', zh: '相机馆',   en: 'Camera',  color: 0x98b8a8, geo: 'torus',        url: 'https://camera-museum-nine.vercel.app' },
-];
-
-// Build a target-position buffer from a Three.js geometry by surface-sampling
-function sampleGeometry(geometry, count, scale = 1.2) {
-  const mat = new THREE.MeshBasicMaterial();
-  const mesh = new THREE.Mesh(geometry, mat);
-  mesh.scale.setScalar(scale);
-  mesh.updateMatrixWorld(true);
-  // MeshSurfaceSampler needs indexed geometry; ensure that:
-  const sampler = new MeshSurfaceSampler(mesh).build();
-  const arr = new Float32Array(count * 3);
-  const tmp = new THREE.Vector3();
-  for (let i = 0; i < count; i++) {
-    sampler.sample(tmp);
-    tmp.multiplyScalar(scale);
-    arr[i*3 + 0] = tmp.x;
-    arr[i*3 + 1] = tmp.y;
-    arr[i*3 + 2] = tmp.z;
-  }
-  return arr;
-}
-
-// Create all 5 target buffers
-function makeGeometry(name) {
-  switch (name) {
-    case 'cube':         return new THREE.BoxGeometry(2, 2, 2, 12, 12, 12);
-    case 'octahedron':   return new THREE.OctahedronGeometry(1.4, 4);
-    case 'dodecahedron': return new THREE.DodecahedronGeometry(1.4, 2);
-    case 'icosahedron':  return new THREE.IcosahedronGeometry(1.4, 3);
-    case 'torus':        return new THREE.TorusGeometry(1.2, 0.45, 32, 64);
-    default:             return new THREE.SphereGeometry(1.4, 32, 32);
-  }
-}
-
-const targets = ROOMS.map(r => sampleGeometry(makeGeometry(r.geo), N, 1.0));
-
-// ── Particle system ─────────────────────────────────────────
-const positions = new Float32Array(N * 3);          // current
-const targetA   = new Float32Array(N * 3);          // morph FROM
-const targetB   = new Float32Array(N * 3);          // morph TO
-const random    = new Float32Array(N);              // jitter offsets
-
-// Start positions: scattered sphere shell, gives 'gathering' feel on first morph-in
-for (let i = 0; i < N; i++) {
-  const theta = Math.random() * Math.PI * 2;
-  const phi   = Math.acos(2 * Math.random() - 1);
-  const r     = 5 + Math.random() * 3;
-  positions[i*3+0] = r * Math.sin(phi) * Math.cos(theta);
-  positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-  positions[i*3+2] = r * Math.cos(phi);
-  random[i] = Math.random();
-}
-// Initial A/B: both = room 0 target (so initial morph snaps from scattered sphere)
-targetA.set(targets[0]);
-targetB.set(targets[0]);
+// Start scattered (idle state)
+positions.set(nebula);
+targetA.set(nebula);
+targetB.set(nebula);
+for (let i = 0; i < N; i++) random[i] = Math.random();
 
 const geom = new THREE.BufferGeometry();
 geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -312,13 +397,13 @@ geom.setAttribute('aTargetA', new THREE.BufferAttribute(targetA, 3));
 geom.setAttribute('aTargetB', new THREE.BufferAttribute(targetB, 3));
 geom.setAttribute('aRandom',  new THREE.BufferAttribute(random, 1));
 
-// Shader material — morph in vertex, glow in fragment
 const uniforms = {
-  uProgress: { value: 0.0 },         // 0..1 morph A→B
-  uColorA:   { value: new THREE.Color(ROOMS[0].color) },
-  uColorB:   { value: new THREE.Color(ROOMS[0].color) },
-  uTime:     { value: 0 },
-  uSize:     { value: 6.0 * renderer.getPixelRatio() },
+  uProgress:  { value: 0.0 },
+  uColorA:    { value: new THREE.Color(0xffffff) },   // idle white
+  uColorB:    { value: new THREE.Color(0xffffff) },
+  uIdle:      { value: 1.0 },                          // 1 = idle nebula, 0 = formed shape
+  uTime:      { value: 0 },
+  uSize:      { value: 5.5 * renderer.getPixelRatio() },
 };
 
 const material = new THREE.ShaderMaterial({
@@ -333,26 +418,23 @@ const material = new THREE.ShaderMaterial({
     uniform float uProgress;
     uniform float uTime;
     uniform float uSize;
+    uniform float uIdle;
     varying float vNoise;
     varying float vProgress;
 
-    // Pseudo-curl: offset each particle along an arc so morphs feel organic
     vec3 curlOffset(vec3 a, vec3 b, float t, float seed) {
       vec3 mid = mix(a, b, 0.5);
-      // perpendicular vector that varies per particle
       vec3 axis = normalize(vec3(sin(seed*6.28), cos(seed*4.7), sin(seed*9.1)));
-      vec3 perp = normalize(cross(b - a, axis)) * length(b - a) * 0.3;
+      vec3 perp = normalize(cross(b - a + vec3(0.001), axis)) * length(b - a) * 0.28;
       float arc = sin(t * 3.14159) * (0.4 + 0.6 * seed);
       return mid + perp * arc;
     }
 
     void main() {
-      // Eased progress per particle (varies by aRandom for organic stagger)
-      float p = clamp((uProgress - aRandom * 0.35) / 0.65, 0.0, 1.0);
-      p = p * p * (3.0 - 2.0 * p);  // smoothstep
+      float p = clamp((uProgress - aRandom * 0.32) / 0.68, 0.0, 1.0);
+      p = p * p * (3.0 - 2.0 * p);
       vProgress = p;
 
-      // Curved bezier-ish morph path
       vec3 mid = curlOffset(aTargetA, aTargetB, p, aRandom);
       vec3 pos = mix(
         mix(aTargetA, mid, p),
@@ -360,39 +442,42 @@ const material = new THREE.ShaderMaterial({
         p
       );
 
-      // Idle jitter so the formed shape breathes
-      float jitter = sin(uTime * 1.2 + aRandom * 31.4) * 0.012
-                   + cos(uTime * 0.7 + aRandom * 17.1) * 0.012;
-      pos += normalize(pos + 0.001) * jitter;
+      // idle drift + breathing
+      float drift = mix(0.06, 0.018, 1.0 - uIdle);
+      pos += vec3(
+        sin(uTime * 0.7 + aRandom * 18.0),
+        cos(uTime * 0.9 + aRandom * 24.0),
+        sin(uTime * 1.1 + aRandom * 31.0)
+      ) * drift;
 
       vNoise = aRandom;
 
       vec4 mv = modelViewMatrix * vec4(pos, 1.0);
       gl_Position = projectionMatrix * mv;
-      gl_PointSize = uSize * (1.0 / -mv.z) * (0.7 + 0.6 * aRandom);
+      gl_PointSize = uSize * (1.0 / -mv.z) * (0.65 + 0.5 * aRandom);
     }
   `,
   fragmentShader: /* glsl */`
     uniform vec3 uColorA;
     uniform vec3 uColorB;
     uniform float uProgress;
+    uniform float uIdle;
     varying float vNoise;
     varying float vProgress;
 
     void main() {
-      // soft circular sprite
       vec2 uv = gl_PointCoord - 0.5;
       float d = length(uv);
       float a = smoothstep(0.5, 0.0, d);
       if (a < 0.02) discard;
 
-      // crossfade colour (slightly delayed vs position so colour 'follows')
       float colorProg = smoothstep(0.15, 0.85, uProgress);
       vec3 col = mix(uColorA, uColorB, colorProg);
-      // brighten the "in-flight" particles
-      col += vec3(0.18) * vProgress * (1.0 - vProgress) * 4.0;
+      // idle adds a soft warm tint so pure white doesn't look flat
+      col = mix(col, vec3(0.85, 0.86, 0.9), uIdle * 0.4);
+      col += vec3(0.18) * vProgress * (1.0 - vProgress) * 3.5;
 
-      gl_FragColor = vec4(col, a * (0.85 + 0.15 * vNoise));
+      gl_FragColor = vec4(col, a * (0.8 + 0.2 * vNoise));
     }
   `,
 });
@@ -400,109 +485,203 @@ const material = new THREE.ShaderMaterial({
 const points = new THREE.Points(geom, material);
 scene.add(points);
 
-// ── Morph driver ────────────────────────────────────────────
-let currentRoom = 0;
-let nextRoom    = 0;
-let morphStartTime = 0;
-let morphing = false;
-const MORPH_DURATION = 2.2; // seconds
-const HOLD_DURATION  = 4.5; // hold a shape this long before auto-morph
+// Gentle constant rotation (so it never looks dead)
+let baseRotY = 0, baseRotX = 0;
+let userRotY = 0, userRotX = 0;
+let dragging = false, lastX = 0, lastY = 0;
+canvas.addEventListener('mousedown', e => {
+  dragging = true;
+  document.documentElement.classList.add('dragging');
+  lastX = e.clientX; lastY = e.clientY;
+});
+window.addEventListener('mouseup', () => {
+  dragging = false;
+  document.documentElement.classList.remove('dragging');
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  userRotY += (e.clientX - lastX) * 0.005;
+  userRotX = Math.max(-0.6, Math.min(0.6, userRotX + (e.clientY - lastY) * 0.003));
+  lastX = e.clientX; lastY = e.clientY;
+});
 
-const labelEl = document.getElementById('label');
-const numEl   = document.getElementById('num');
-const zhEl    = document.getElementById('name-zh');
-const enEl    = document.getElementById('name-en');
-const ctaEl   = document.getElementById('cta');
-const progressEl = document.getElementById('progress');
+// ─── Build the dock ──────────────────────────────────────────
+const dock = document.getElementById('dock');
+ROOMS.forEach((r, i) => {
+  const btn = document.createElement('div');
+  btn.className = 'dock-btn';
+  btn.dataset.idx = i;
+  btn.style.setProperty('--c', `#${r.color.toString(16).padStart(6,'0')}`);
+  btn.style.setProperty('--g', `#${r.color.toString(16).padStart(6,'0')}`);
+  btn.innerHTML = `
+    <div class="ico">${ICON_SVG[r.shape]}</div>
+    <div class="label">${r.zh}</div>
+  `;
+  btn.addEventListener('mouseenter', () => selectRoom(i));
+  btn.addEventListener('click',      () => selectRoom(i));
+  dock.appendChild(btn);
+  if (i < ROOMS.length - 1) {
+    const div = document.createElement('div'); div.className = 'dock-divider';
+    dock.appendChild(div);
+  }
+});
+const dockBtns = [...dock.querySelectorAll('.dock-btn')];
 
-function paintLabel(idx) {
+// ─── Selection driver ────────────────────────────────────────
+let currentIdx = -1;       // -1 = idle nebula
+let targetIdx  = -1;
+let morphStart = 0;
+let morphing   = false;
+const MORPH_DURATION = 1.6;
+
+const labelEl     = document.getElementById('label');
+const idleHintEl  = document.getElementById('idleHint');
+const confirmEl   = document.getElementById('confirm');
+
+function paintRoom(idx) {
+  if (idx < 0) return;
   const r = ROOMS[idx];
-  labelEl.style.setProperty('--accent', `#${r.color.toString(16).padStart(6,'0')}`);
-  labelEl.style.setProperty('--accent-glow', `rgba(${(r.color>>16)&255}, ${(r.color>>8)&255}, ${r.color&255}, 0.45)`);
-  numEl.textContent = `— ${r.num} —`;
-  zhEl.textContent  = r.zh;
-  enEl.textContent  = r.en;
-  ctaEl.href = r.url;
-  [...progressEl.children].forEach((p, i) => p.classList.toggle('active', i === idx));
+  const hex = `#${r.color.toString(16).padStart(6,'0')}`;
+  const glow = `rgba(${(r.color>>16)&255}, ${(r.color>>8)&255}, ${r.color&255}, 0.45)`;
+  labelEl.style.setProperty('--accent', hex);
+  labelEl.style.setProperty('--accent-glow', glow);
+  labelEl.querySelector('.num').textContent = `— ${r.num} —`;
+  labelEl.querySelector('.zh').textContent  = r.zh;
+  labelEl.querySelector('.en').textContent  = r.en;
+  confirmEl.style.setProperty('--accent', hex);
+  confirmEl.style.setProperty('--accent-glow', glow);
+  confirmEl.textContent = `进入 ${r.zh}`;
+  dockBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
 }
-paintLabel(0);
 
-function startMorph(toIdx) {
-  if (morphing) return;
-  morphing = true;
-  morphStartTime = clock.getElapsedTime();
-  nextRoom = toIdx;
+function selectRoom(idx) {
+  if (idx === targetIdx && !morphing) return;
+  if (morphing) return; // don't interrupt mid-morph for snappiness
+  // First selection from idle: hide hint, show label
+  if (currentIdx < 0) {
+    idleHintEl.classList.add('hidden');
+    labelEl.style.opacity = '1';
+  }
+  paintRoom(idx);
 
-  // Update geometry attributes
+  // Buffers
   const aA = geom.getAttribute('aTargetA');
   const aB = geom.getAttribute('aTargetB');
-  aA.array.set(targets[currentRoom]);
-  aB.array.set(targets[nextRoom]);
+  aA.array.set(currentIdx < 0 ? nebula : targets[currentIdx]);
+  aB.array.set(targets[idx]);
   aA.needsUpdate = true;
   aB.needsUpdate = true;
 
-  uniforms.uColorA.value.setHex(ROOMS[currentRoom].color);
-  uniforms.uColorB.value.setHex(ROOMS[nextRoom].color);
+  // Colors
+  uniforms.uColorA.value.setHex(currentIdx < 0 ? 0xffffff : ROOMS[currentIdx].color);
+  uniforms.uColorB.value.setHex(ROOMS[idx].color);
 
-  // Fade label out, then in with new
-  labelEl.classList.remove('fade-in');
-  labelEl.classList.add('fade-out');
-  setTimeout(() => {
-    paintLabel(nextRoom);
-    labelEl.classList.remove('fade-out');
-    labelEl.classList.add('fade-in');
-  }, 900);
+  targetIdx = idx;
+  morphing = true;
+  morphStart = clock.getElapsedTime();
+
+  // confirm button
+  confirmEl.classList.add('visible');
 }
 
-function endMorph() {
-  morphing = false;
-  currentRoom = nextRoom;
-  uniforms.uProgress.value = 0;
+function deselectToIdle() {
+  if (currentIdx < 0 && targetIdx < 0) return;
+  // morph back to nebula
+  const aA = geom.getAttribute('aTargetA');
+  const aB = geom.getAttribute('aTargetB');
+  aA.array.set(currentIdx < 0 ? nebula : targets[currentIdx]);
+  aB.array.set(nebula);
+  aA.needsUpdate = true;
+  aB.needsUpdate = true;
+  uniforms.uColorA.value.setHex(currentIdx < 0 ? 0xffffff : ROOMS[currentIdx].color);
+  uniforms.uColorB.value.setHex(0xffffff);
+  targetIdx = -1;
+  morphing = true;
+  morphStart = clock.getElapsedTime();
+  confirmEl.classList.remove('visible');
+  labelEl.style.opacity = '0';
+  idleHintEl.classList.remove('hidden');
+  dockBtns.forEach(b => b.classList.remove('active'));
 }
 
-// Auto-cycle
-let holdUntil = HOLD_DURATION;
-function autoTick(elapsed) {
-  if (!morphing && elapsed > holdUntil) {
-    startMorph((currentRoom + 1) % ROOMS.length);
-  }
-  if (morphing) {
-    const t = (elapsed - morphStartTime) / MORPH_DURATION;
-    uniforms.uProgress.value = Math.min(t, 1.0);
-    if (t >= 1.0) {
-      endMorph();
-      holdUntil = elapsed + HOLD_DURATION;
-    }
-  }
-}
+// Confirm → navigate
+confirmEl.addEventListener('click', () => {
+  if (targetIdx < 0) return;
+  window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
+});
 
-// Manual: space bar or click on CTA's surroundings → next
-window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') {
+// Keyboard
+window.addEventListener('keydown', e => {
+  if (e.code === 'ArrowRight' || e.code === 'ArrowDown') {
     e.preventDefault();
-    if (!morphing) {
-      startMorph((currentRoom + 1) % ROOMS.length);
-      holdUntil = clock.getElapsedTime() + 10; // delay auto for a bit
-    }
+    const next = currentIdx < 0 ? 0 : Math.min(currentIdx + 1, ROOMS.length - 1);
+    selectRoom(next);
+  } else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    const next = currentIdx < 0 ? 0 : Math.max(currentIdx - 1, 0);
+    selectRoom(next);
+  } else if (e.code === 'Enter') {
+    e.preventDefault();
+    if (targetIdx >= 0) window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
+  } else if (e.code === 'Escape') {
+    e.preventDefault();
+    deselectToIdle();
+  } else if (e.code === 'Digit1') selectRoom(0);
+  else if   (e.code === 'Digit2') selectRoom(1);
+  else if   (e.code === 'Digit3') selectRoom(2);
+  else if   (e.code === 'Digit4') selectRoom(3);
+  else if   (e.code === 'Digit5') selectRoom(4);
+});
+
+// Mouse wheel = step through
+window.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (morphing) return;
+  const dir = Math.sign(e.deltaY);
+  const next = currentIdx < 0 ? 0 : Math.max(0, Math.min(ROOMS.length - 1, currentIdx + dir));
+  selectRoom(next);
+}, { passive: false });
+
+// Click on canvas = confirm if something selected
+canvas.addEventListener('click', () => {
+  if (targetIdx >= 0 && !morphing) {
+    window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
   }
 });
 
-// ── Resize ──────────────────────────────────────────────────
+// ─── Resize ──────────────────────────────────────────────────
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
-  uniforms.uSize.value = 6.0 * renderer.getPixelRatio();
+  uniforms.uSize.value = 5.5 * renderer.getPixelRatio();
 });
 
-// ── Render loop ─────────────────────────────────────────────
+// ─── Render loop ─────────────────────────────────────────────
 const clock = new THREE.Clock();
 function animate() {
   const elapsed = clock.getElapsedTime();
   uniforms.uTime.value = elapsed;
-  autoTick(elapsed);
-  controls.update();
+
+  // base auto-rotate (slow, always present)
+  baseRotY += 0.0015;
+  const rotY = baseRotY + userRotY;
+  const rotX = baseRotX + userRotX;
+  points.rotation.y = rotY;
+  points.rotation.x = rotX;
+
+  if (morphing) {
+    const t = (elapsed - morphStart) / MORPH_DURATION;
+    uniforms.uProgress.value = Math.min(t, 1.0);
+    if (t >= 1.0) {
+      morphing = false;
+      currentIdx = targetIdx;
+      uniforms.uProgress.value = 0;
+      // when settled into a shape, dim idle factor; when back to nebula, raise it
+      uniforms.uIdle.value = currentIdx < 0 ? 1.0 : 0.15;
+    }
+  }
   composer.render();
   requestAnimationFrame(animate);
 }
