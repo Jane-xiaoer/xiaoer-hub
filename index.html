@@ -4,310 +4,337 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>小耳 · Hub</title>
-<meta name="description" content="小耳 Jane 的互动项目集 — 相机博物馆 · 3D 城市 · 神经舞蹈" />
+<meta name="description" content="小耳 Jane 的互动项目集 — 5 道门,每道是一个馆" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=DM+Serif+Display:ital@0;1&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;500&family=Noto+Serif+SC:wght@300;700&display=swap" rel="stylesheet">
+
 <style>
-  :root {
-    --canvas: #ffffff;
-    --ink:    #111111;
-    --line:   #1a1a1a;
-    --muted:  #888888;
-    --body:   #444444;
-
-    --pastel-mint:   #CCE8B0;
-    --pastel-cream:  #FEFCE0;
-    --pastel-cherry: #FFE5E5;
-    --pastel-sky:    #C2EEF7;
-    --accent: #c8ff00;
-
-    --serif: 'DM Serif Display', 'Noto Serif SC', Georgia, serif;
-    --hand:  'Caveat', cursive;
-    --sans:  system-ui, -apple-system, 'Helvetica Neue', 'PingFang SC', sans-serif;
-
-    --nav-h: 64px;
-    --section-pad-y: 96px;
-    --section-pad-x: max(40px, 6vw);
+  /* ─── Reset & base ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #0a0612;
+    color: #e8e8f0;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    cursor: grab;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
   }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: var(--sans);
-    font-size: 15px;
-    line-height: 1.8;
-    color: var(--body);
-    background: var(--canvas);
-  }
-
+  html.dragging, html.dragging * { cursor: grabbing; }
   a { color: inherit; text-decoration: none; }
 
-  /* ----- Nav ----- */
-  nav.brand {
-    position: fixed; top: 0; left: 0; right: 0;
-    height: var(--nav-h);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 var(--section-pad-x);
-    background: rgba(255,255,255,0.0);
-    backdrop-filter: blur(0);
-    transition: background .4s, backdrop-filter .4s;
-    z-index: 50;
-  }
-  nav.brand.scrolled {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(14px);
-    border-bottom: 0.5px solid rgba(0,0,0,0.06);
-  }
-  nav.brand .mark {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 20px;
-    color: var(--ink);
-  }
-  nav.brand .sub {
-    font-family: var(--hand);
-    font-size: 18px;
-    color: var(--muted);
-    margin-left: 8px;
-  }
-  nav .links { display: flex; gap: 24px; font-size: 13px; }
-  nav .links a:hover { color: var(--accent-fg, var(--ink)); opacity: .7; }
-
-  /* ----- Section base ----- */
-  section { padding: var(--section-pad-y) var(--section-pad-x); position: relative; overflow: hidden; }
-  .divider {
-    height: 16px;
-    background-image: radial-gradient(circle, #5a8a38 1.5px, transparent 1.5px);
-    background-size: 16px 16px;
-    background-repeat: repeat-x;
-    background-position: center;
-  }
-  .section-label {
-    font-family: var(--hand);
-    font-size: 32px;
-    color: var(--ink);
-    margin-bottom: 6px;
-  }
-  .section-label + svg.wavy { display: block; margin-bottom: 56px; max-width: 1200px; }
-
-  /* ----- Hero + physics garden ----- */
-  .hero {
-    position: relative; overflow: hidden;
-    min-height: 100vh;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding-top: calc(var(--nav-h) + 48px);
-    cursor: grab;
-  }
-  .hero-eyebrow {
-    font-family: var(--hand);
-    font-size: 22px;
-    color: var(--muted);
-    margin-bottom: 8px;
-    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
-  }
-  .hero-text {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: clamp(40px, 7vw, 76px);
-    line-height: 1.15;
-    color: var(--ink);
-    text-align: center;
-    max-width: 12em;
-    margin: 0 auto 16px;
-    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
-  }
-  .hero-sub {
-    font-family: var(--sans);
-    font-size: 15px;
-    color: var(--body);
-    text-align: center;
-    max-width: 32em;
-    margin: 0 auto;
-    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 400ms both;
-  }
-  @keyframes heroTextIn {
-    from { opacity: 0; transform: translateY(24px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .hero-illustrations {
-    position: absolute; inset: 0; pointer-events: none;
-  }
-  .hero-illustrations svg {
-    position: absolute; opacity: 0; will-change: transform;
-  }
-  .hero-hint {
-    position: absolute; bottom: 28px; left: 50%;
-    transform: translateX(-50%);
-    font-family: var(--hand);
-    font-size: 16px;
-    color: var(--muted);
-    opacity: 0.7;
+  /* ─── Background: deep purple gradient + animated gradient mesh ─── */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 30%, rgba(140, 80, 220, 0.25), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 70%, rgba(60, 140, 220, 0.20), transparent 60%),
+      radial-gradient(ellipse 50% 60% at 50% 100%, rgba(220, 80, 160, 0.15), transparent 60%),
+      linear-gradient(180deg, #0a0612 0%, #14092a 50%, #0a0612 100%);
     pointer-events: none;
-    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 1200ms both;
+    z-index: 0;
+    animation: bgShift 24s ease-in-out infinite alternate;
+  }
+  @keyframes bgShift {
+    0%   { transform: translate(0,0) scale(1); }
+    100% { transform: translate(-3%, 3%) scale(1.05); }
   }
 
-  /* ----- Projects grid ----- */
-  .projects {
-    background: var(--pastel-cream);
+  /* ─── Floating geometric shapes in the void (decoration) ─── */
+  .void-shape {
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.3;
+    filter: blur(1px);
+    animation: floatShape 20s ease-in-out infinite;
   }
-  .projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 32px;
-    max-width: 1200px;
-    margin: 0 auto;
+  .void-shape.s1 { top: 8%;  left: 6%;  width: 120px; height: 120px; animation-delay: 0s; }
+  .void-shape.s2 { top: 12%; right: 8%; width: 80px;  height: 80px;  animation-delay: -7s; }
+  .void-shape.s3 { bottom: 10%; left: 12%; width: 100px; height: 100px; animation-delay: -14s; }
+  .void-shape.s4 { bottom: 14%; right: 6%; width: 90px; height: 90px;  animation-delay: -4s; }
+  @keyframes floatShape {
+    0%, 100% { transform: translate(0,0) rotate(0deg); }
+    33%      { transform: translate(20px, -30px) rotate(120deg); }
+    66%      { transform: translate(-15px, 20px) rotate(240deg); }
   }
-  .project-card {
-    position: relative;
-    background: white;
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
-    transition: opacity .24s ease;
-    display: flex; flex-direction: column;
+
+  /* ─── Top nav: minimal mark ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    z-index: 10;
+    pointer-events: none;
   }
-  .project-card:hover { opacity: 0.92; }
-  .project-card .cover {
-    aspect-ratio: 16 / 10;
-    background: var(--cover-bg, #f0f0f0);
-    position: relative; overflow: hidden;
-    display: flex; align-items: center; justify-content: center;
+  nav .mark {
+    font-family: "DM Serif Display", serif;
+    font-style: italic;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+    color: #f0f0fa;
+    text-shadow: 0 0 24px rgba(160, 120, 240, 0.4);
   }
-  .project-card .cover-emoji {
-    font-size: 100px;
-    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.1));
+  nav .mark .ear {
+    display: inline-block;
+    transform: translateY(-1px);
+    margin-right: 6px;
   }
-  .project-card .body {
-    padding: 22px 24px 26px;
-  }
-  .project-card .num {
-    font-family: var(--sans);
+  nav .meta {
     font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.18em;
+    letter-spacing: 0.25em;
+    color: rgba(232, 232, 240, 0.45);
     text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .project-card .name-zh {
-    font-family: var(--serif);
-    font-size: 24px;
-    color: var(--ink);
-    margin-bottom: 2px;
-  }
-  .project-card .name-en {
-    font-family: var(--hand);
-    font-size: 18px;
-    color: var(--muted);
-    margin-bottom: 12px;
-  }
-  .project-card .desc {
-    font-size: 13.5px;
-    line-height: 1.7;
-    color: var(--body);
-    margin-bottom: 14px;
-  }
-  .project-card .tags {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    margin-bottom: 14px;
-  }
-  .project-card .tag {
-    font-size: 10.5px;
-    padding: 3px 9px;
-    border: 1px solid var(--line);
-    border-radius: 100px;
-    color: var(--ink);
-  }
-  .project-card .cta {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px;
-    color: var(--ink);
-    font-weight: 600;
-  }
-  .project-card .cta::after { content: '→'; transition: transform .24s ease; }
-  .project-card:hover .cta::after { transform: translateX(4px); }
-
-  .project-card.coming-soon {
-    background: transparent;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
-  }
-  .project-card.coming-soon .cover {
-    background: transparent;
-  }
-  .project-card.coming-soon .cover-emoji { opacity: 0.35; }
-  .project-card.coming-soon:hover { opacity: 1; cursor: default; }
-  .project-card.coming-soon .cta { color: var(--muted); }
-
-  /* ----- About ----- */
-  .about {
-    background: white;
-  }
-  .about-wrap {
-    max-width: 880px; margin: 0 auto;
-    display: grid; grid-template-columns: 1fr; gap: 16px;
-  }
-  .about p {
-    font-size: 16px;
-    line-height: 1.9;
-    color: var(--body);
-  }
-  .about p.poetic {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 22px;
-    color: var(--ink);
-    line-height: 1.5;
-    margin: 8px 0 20px;
   }
 
-  /* ----- Contact ----- */
-  .contact {
-    background: var(--pastel-sky);
+  /* ─── Stage: the 3D scene container ─── */
+  .stage {
+    position: fixed; inset: 0;
+    perspective: 1400px;
+    perspective-origin: 50% 50%;
+    z-index: 1;
   }
-  .contact-grid {
-    max-width: 1000px; margin: 0 auto;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 32px;
-  }
-  .contact-cell {
-    padding: 16px 0;
-    border-bottom: 1px dashed rgba(0,0,0,0.15);
-  }
-  .contact-label {
-    font-size: 10.5px;
-    color: var(--muted);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .contact-handle {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 18px;
-    color: var(--ink);
+  .pentagon {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    transform-style: preserve-3d;
+    transform: translate(-50%, -50%) rotateX(var(--tilt, -8deg)) rotateY(var(--rotation, 0deg));
+    transition: transform 0.06s linear;  /* very slight smoothing for inertia */
+    will-change: transform;
   }
 
-  /* ----- Footer ----- */
-  footer {
+  /* ─── Door: each face of the pentagon ─── */
+  /* Pentagon radius: how far each door sits from the centre.
+     With 5 doors at 72° spacing, radius ~ width / (2 * tan(π/5)) = width * 0.688 */
+  .door {
+    --door-w: 280px;
+    --door-h: 380px;
+    --door-r: 280px;  /* distance from centre (z translate) */
+    --accent: #c8a8ff;
+    --accent-glow: rgba(200, 168, 255, 0.35);
+
+    position: absolute;
+    top: calc(var(--door-h) / -2);
+    left: calc(var(--door-w) / -2);
+    width: var(--door-w);
+    height: var(--door-h);
+    transform-style: preserve-3d;
+    transform-origin: 50% 50%;
+    cursor: pointer;
+    pointer-events: auto;
+
+    background:
+      linear-gradient(180deg, rgba(20, 12, 36, 0.88) 0%, rgba(30, 16, 48, 0.92) 100%);
+    border: 1px solid rgba(200, 168, 255, 0.18);
+    border-radius: 6px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+
+    /* Frame glow */
+    box-shadow:
+      0 0 0 1px rgba(200, 168, 255, 0.05),
+      0 0 30px rgba(140, 80, 220, 0.12),
+      inset 0 0 60px rgba(200, 168, 255, 0.04);
+
+    transition: box-shadow 0.4s ease, border-color 0.4s ease, filter 0.4s ease;
+    backface-visibility: hidden;
+  }
+
+  /* Place each door around the pentagon */
+  .door.d1 { transform: rotateY(  0deg) translateZ(var(--door-r)); --accent: #c8a8ff; --accent-glow: rgba(200, 168, 255, 0.42); }
+  .door.d2 { transform: rotateY( 72deg) translateZ(var(--door-r)); --accent: #ffb8d8; --accent-glow: rgba(255, 184, 216, 0.42); }
+  .door.d3 { transform: rotateY(144deg) translateZ(var(--door-r)); --accent: #98e8d0; --accent-glow: rgba(152, 232, 208, 0.42); }
+  .door.d4 { transform: rotateY(216deg) translateZ(var(--door-r)); --accent: #ffd888; --accent-glow: rgba(255, 216, 136, 0.42); }
+  .door.d5 { transform: rotateY(288deg) translateZ(var(--door-r)); --accent: #88c8ff; --accent-glow: rgba(136, 200, 255, 0.42); }
+
+  .door:hover {
+    box-shadow:
+      0 0 0 1px var(--accent),
+      0 0 40px var(--accent-glow),
+      0 0 80px var(--accent-glow),
+      inset 0 0 60px rgba(200, 168, 255, 0.08);
+    border-color: var(--accent);
+  }
+
+  /* Door inner — vertical column layout */
+  .door-inner {
+    position: absolute;
+    inset: 0;
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .door-num {
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    opacity: 0.6;
+    text-shadow: 0 0 8px var(--accent-glow);
+  }
+  .door-icon {
+    font-size: 90px;
+    line-height: 1;
+    filter: drop-shadow(0 0 24px var(--accent-glow)) drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+    margin-top: 4px;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .door:hover .door-icon {
+    transform: translateY(-4px) scale(1.06);
+  }
+  .door-title-wrap {
     text-align: center;
-    padding: 64px 24px;
-    color: var(--muted);
-    font-size: 12px;
   }
-  footer .mark {
-    font-family: var(--serif);
+  .door-zh {
+    font-family: "Noto Serif SC", "DM Serif Display", serif;
+    font-weight: 300;
+    font-size: 26px;
+    letter-spacing: 0.05em;
+    color: #f4f4fc;
+    text-shadow: 0 0 16px var(--accent-glow);
+  }
+  .door-en {
+    font-family: "DM Serif Display", serif;
     font-style: italic;
-    font-size: 22px;
-    color: var(--ink);
-    margin-bottom: 4px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin-top: 4px;
+    opacity: 0.85;
   }
-  footer .sub {
-    font-family: var(--hand);
-    font-size: 16px;
-    margin-bottom: 16px;
+  .door-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(232, 232, 240, 0.6);
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(232, 232, 240, 0.15);
+    transition: color 0.3s, border-color 0.3s, letter-spacing 0.3s;
+  }
+  .door:hover .door-cta {
+    color: var(--accent);
+    border-color: var(--accent);
+    letter-spacing: 0.4em;
   }
 
-  /* ----- Accessibility ----- */
+  /* Decorative corner brackets (sci-fi feel) */
+  .door::before, .door::after {
+    content: "";
+    position: absolute;
+    width: 14px; height: 14px;
+    border: 1px solid var(--accent);
+    opacity: 0.6;
+    transition: opacity 0.3s, border-color 0.3s;
+  }
+  .door::before { top: 8px;    left: 8px;   border-right: 0; border-bottom: 0; }
+  .door::after  { bottom: 8px; right: 8px;  border-left:  0; border-top:    0; }
+  .door:hover::before, .door:hover::after { opacity: 1; }
+
+  /* Subtle scan-line pattern on each door */
+  .door-scanlines {
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(200, 168, 255, 0.025) 2px,
+      rgba(200, 168, 255, 0.025) 3px
+    );
+    pointer-events: none;
+  }
+
+  /* ─── Centre marker (the 5-pointed star of the polyhedron) ─── */
+  .core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px; height: 6px;
+    background: #c8a8ff;
+    border-radius: 50%;
+    box-shadow:
+      0 0 12px rgba(200, 168, 255, 0.9),
+      0 0 28px rgba(200, 168, 255, 0.6),
+      0 0 60px rgba(200, 168, 255, 0.3);
+    z-index: 2;
+    pointer-events: none;
+    animation: corePulse 4s ease-in-out infinite;
+  }
+  @keyframes corePulse {
+    0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    50%      { opacity: 0.6; transform: translate(-50%, -50%) scale(1.4); }
+  }
+
+  /* ─── Bottom HUD ─── */
+  .hud {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    color: rgba(232, 232, 240, 0.4);
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  .hud .hint-key {
+    border: 1px solid rgba(232, 232, 240, 0.2);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin: 0 4px;
+    color: rgba(232, 232, 240, 0.7);
+  }
+
+  /* ─── Side meta ─── */
+  .side-meta {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 10;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: rgba(232, 232, 240, 0.35);
+    text-transform: uppercase;
+    text-align: right;
+    pointer-events: none;
+    line-height: 1.8;
+  }
+  .side-meta .row { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+  .side-meta .dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #c8a8ff;
+    box-shadow: 0 0 6px rgba(200, 168, 255, 0.8);
+    animation: corePulse 2s ease-in-out infinite;
+  }
+
+  /* ─── Door-opening animation when clicked ─── */
+  .door.opening {
+    animation: doorOpen 0.7s ease-in forwards;
+  }
+  @keyframes doorOpen {
+    0%   { transform: rotateY(var(--y-base, 0deg)) translateZ(var(--door-r)) scale(1); opacity: 1; }
+    100% { transform: rotateY(var(--y-base, 0deg)) translateZ(var(--door-r)) scale(2.5); opacity: 0; }
+  }
+
+  /* ─── Mobile fallback ─── */
+  @media (max-width: 700px) {
+    .door {
+      --door-w: 220px;
+      --door-h: 300px;
+      --door-r: 220px;
+    }
+    .door-icon { font-size: 70px; }
+    .door-zh { font-size: 22px; }
+  }
+
+  /* ─── Reduced motion ─── */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0ms !important;
@@ -315,261 +342,244 @@
       transition-duration: 0ms !important;
     }
   }
-
-  /* ----- Responsive ----- */
-  @media (max-width: 700px) {
-    nav .links { display: none; }
-    .hero-illustrations svg { transform: scale(0.7); }
-  }
 </style>
 </head>
 <body>
 
-<nav class="brand" id="main-nav">
-  <div>
-    <span class="mark">XIAOER</span><span class="sub">/ 小耳的小屋</span>
-  </div>
-  <div class="links">
-    <a href="#projects">项目</a>
-    <a href="#about">关于</a>
-    <a href="#contact">联系</a>
-  </div>
+<!-- Decorative floating shapes in the void -->
+<svg class="void-shape s1" viewBox="0 0 100 100">
+  <polygon points="50,5 90,30 75,80 25,80 10,30" fill="none" stroke="#c8a8ff" stroke-width="1" opacity="0.6"/>
+</svg>
+<svg class="void-shape s2" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#ffb8d8" stroke-width="1" opacity="0.5"/>
+  <circle cx="50" cy="50" r="30" fill="none" stroke="#ffb8d8" stroke-width="1" opacity="0.3"/>
+</svg>
+<svg class="void-shape s3" viewBox="0 0 100 100">
+  <polygon points="50,10 90,90 10,90" fill="none" stroke="#98e8d0" stroke-width="1" opacity="0.6"/>
+</svg>
+<svg class="void-shape s4" viewBox="0 0 100 100">
+  <polygon points="20,50 50,20 80,50 50,80" fill="none" stroke="#88c8ff" stroke-width="1" opacity="0.5"/>
+</svg>
+
+<nav>
+  <div class="mark"><span class="ear">👂</span>XIAOER</div>
+  <div class="meta">PENTAGRAM HUB · v1</div>
 </nav>
 
-<!-- ============ HERO + PHYSICS GARDEN ============ -->
-<section id="hero" class="hero">
-  <div class="hero-eyebrow">uki uki · doki doki ·</div>
-  <h1 class="hero-text">
-    日常微小欢喜<br>
-    偶尔心跳加速
-  </h1>
-  <p class="hero-sub">
-    小耳 Jane 做的几个互动项目 · 相机 · 城市 · 舞蹈 · 试试看会发生什么。
-  </p>
-  <p class="hero-hint">↓ 拖拽试试 · drag the floating things</p>
+<div class="stage" id="stage">
+  <div class="pentagon" id="pentagon">
 
-  <div class="hero-illustrations">
-    <!-- Shape A: 大粉橙石 -->
-    <svg width="280" height="260" viewBox="0 0 420 395">
-      <g opacity="0.92">
-        <path d="M30 220 Q42 92 178 52 Q292 18 362 98 Q402 158 387 262 Q368 332 272 358 Q172 382 100 332 Q28 292 30 220Z" fill="#f0b0c0" stroke="#1a1a1a" stroke-width="2.5"/>
-        <path d="M30 220 Q48 132 140 92 Q222 65 294 88 Q272 142 232 166 Q182 186 132 186 Q68 186 30 220Z" fill="#98b8d8" stroke="#1a1a1a" stroke-width="1.5"/>
-        <path d="M76 228 Q128 208 188 224 Q248 238 302 218" fill="none" stroke="#d8d820" stroke-width="4" stroke-linecap="round"/>
-      </g>
-    </svg>
-    <!-- Shape B: 绿茎黄果 -->
-    <svg width="110" height="280" viewBox="-14 0 150 370">
-      <g opacity="0.94">
-        <path d="M63 342 Q58 262 65 182 Q68 122 63 28" stroke="#4a9855" stroke-width="5" fill="none" stroke-linecap="round"/>
-        <circle cx="12" cy="160" r="18" fill="#d8d825" stroke="#5a6018" stroke-width="2"/>
-        <circle cx="114" cy="140" r="18" fill="#d8d825" stroke="#5a6018" stroke-width="2"/>
-        <circle cx="63"  cy="24"  r="20" fill="#d8d825" stroke="#5a6018" stroke-width="2"/>
-      </g>
-    </svg>
-    <!-- Shape C: 粉花石 -->
-    <svg width="200" height="200" viewBox="0 0 295 305">
-      <g opacity="0.9">
-        <path d="M18 148 Q13 78 73 38 Q128 3 198 23 Q253 48 268 108 Q278 162 248 203 Q213 246 153 256 Q88 266 43 228 Q13 203 18 148Z" fill="#f0a8b8" stroke="#1a1a1a" stroke-width="2.5"/>
-        <path d="M53 138 Q72 83 143 68 Q203 58 238 103 Q228 148 198 168 Q158 186 113 178 Q68 168 53 138Z" fill="#78b8c8" stroke="#1a1a1a" stroke-width="1.5"/>
-      </g>
-    </svg>
-    <!-- Shape D: 莱姆十字(唯一高饱和) -->
-    <svg width="40" height="40" viewBox="0 0 56 56">
-      <g opacity="0.92">
-        <line x1="28" y1="4"  x2="28" y2="52" stroke="#c8ff00" stroke-width="5" stroke-linecap="round"/>
-        <line x1="4"  y1="28" x2="52" y2="28" stroke="#c8ff00" stroke-width="5" stroke-linecap="round"/>
-      </g>
-    </svg>
-    <!-- Shape E: 蓝绿叶石 -->
-    <svg width="220" height="240" viewBox="0 0 310 370">
-      <g opacity="0.92">
-        <path d="M8 198 Q13 88 98 38 Q168 3 238 33 Q292 62 295 142 Q298 213 256 272 Q208 333 138 346 Q73 358 28 308 Q3 268 8 198Z" fill="#60b8a0" stroke="#1a1a1a" stroke-width="2.5"/>
-        <path d="M48 188 Q62 118 133 88 Q193 68 242 108 Q266 152 252 203 Q228 248 178 263 Q123 276 78 246 Q43 223 48 188Z" fill="#98d870" stroke="#1a1a1a" stroke-width="1.5"/>
-      </g>
-    </svg>
-    <!-- Shape F: 红钻花 -->
-    <svg width="115" height="155" viewBox="0 0 170 215">
-      <g opacity="0.82">
-        <path d="M35 195 Q32 140 40 88"  stroke="#88c890" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M80 198 Q83 138 75 82"  stroke="#88c890" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <polygon points="40,88 28,68 40,50 52,68" fill="#e06868" opacity="0.9"/>
-        <polygon points="75,82 63,62 75,44 87,62" fill="#e06868" opacity="0.9"/>
-      </g>
-    </svg>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ============ PROJECTS ============ -->
-<section id="projects" class="projects">
-  <div class="section-label">Projects · 互动项目</div>
-  <svg class="wavy" viewBox="0 0 1200 14" preserveAspectRatio="none" width="100%" height="14">
-    <path d="M0 7 Q60 3 120 7 Q180 11 240 7 Q300 3 380 7 Q460 11 540 7 Q620 3 700 7 Q780 11 860 7 Q940 3 1020 8 Q1080 11 1140 7 Q1170 4 1200 7" stroke="#1a1a1a" stroke-width="1.2" fill="none"/>
-  </svg>
-
-  <div class="projects-grid">
-
-    <a class="project-card" href="https://camera-museum-nine.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #f4f4f0;">
-      <div class="cover"><span class="cover-emoji">🎞️</span></div>
-      <div class="body">
-        <div class="num">01 · AI Studio</div>
-        <h3 class="name-zh">相机博物馆</h3>
-        <p class="name-en">ChronoLens</p>
-        <p class="desc">上传一张照片,让 Gemini 把它变成 1850s 银版、1860s 湿版、1890s 大画幅、1975 拍立得… 摄影史上的每台老相机风格。</p>
-        <div class="tags">
-          <span class="tag">Gemini 3</span>
-          <span class="tag">AI 图像</span>
-          <span class="tag">复古</span>
+    <a class="door d1" href="https://camera-museum-nine.vercel.app" target="_blank" rel="noopener" data-y="0">
+      <span class="door-scanlines"></span>
+      <div class="door-inner">
+        <div class="door-num">01</div>
+        <div class="door-icon">🎞️</div>
+        <div class="door-title-wrap">
+          <div class="door-zh">相机博物馆</div>
+          <div class="door-en">ChronoLens</div>
         </div>
-        <span class="cta">进入博物馆</span>
+        <div class="door-cta">Enter</div>
       </div>
     </a>
 
-    <a class="project-card" href="https://city-threejs.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #bfe3dd;">
-      <div class="cover"><span class="cover-emoji">🏙️</span></div>
-      <div class="body">
-        <div class="num">02 · Three.js + MediaPipe</div>
-        <h3 class="name-zh">3D 城市</h3>
-        <p class="name-en">Xiaoer City</p>
-        <p class="desc">一个日式小街的 3D 模型 · 在摄像头前用手势控制视角 · 招财猫坐在屋顶等你。</p>
-        <div class="tags">
-          <span class="tag">Three.js</span>
-          <span class="tag">手势识别</span>
-          <span class="tag">摄像头</span>
+    <a class="door d2" href="https://city-threejs.vercel.app" target="_blank" rel="noopener" data-y="72">
+      <span class="door-scanlines"></span>
+      <div class="door-inner">
+        <div class="door-num">02</div>
+        <div class="door-icon">🏙️</div>
+        <div class="door-title-wrap">
+          <div class="door-zh">3D 城市</div>
+          <div class="door-en">Xiaoer City</div>
         </div>
-        <span class="cta">进城逛逛</span>
+        <div class="door-cta">Enter</div>
       </div>
     </a>
 
-    <a class="project-card" href="https://dance-beta.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #1a1a1a; color: white;">
-      <div class="cover" style="background:#0a0c10"><span class="cover-emoji">💃</span></div>
-      <div class="body">
-        <div class="num">03 · Neural Filter</div>
-        <h3 class="name-zh">神经舞蹈</h3>
-        <p class="name-en">Starry Vision</p>
-        <p class="desc">小耳请你跳支舞 · 摄像头看着你 · 实时把画面变成梵高星空 / 向日葵 / 表现主义 · 60FPS 粒子神经滤镜。</p>
-        <div class="tags">
-          <span class="tag">Canvas</span>
-          <span class="tag">梵高</span>
-          <span class="tag">摄像头</span>
+    <a class="door d3" href="https://dance-beta.vercel.app" target="_blank" rel="noopener" data-y="144">
+      <span class="door-scanlines"></span>
+      <div class="door-inner">
+        <div class="door-num">03</div>
+        <div class="door-icon">💃</div>
+        <div class="door-title-wrap">
+          <div class="door-zh">神经舞蹈</div>
+          <div class="door-en">Starry Vision</div>
         </div>
-        <span class="cta">开始跳舞</span>
+        <div class="door-cta">Enter</div>
       </div>
     </a>
 
-    <a class="project-card" href="https://headshot-psi-indol.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #fde2e7;">
-      <div class="cover" style="background: #fde2e7;"><span class="cover-emoji">👔</span></div>
-      <div class="body">
-        <div class="num">04 · AI Studio</div>
-        <h3 class="name-zh">肖像馆</h3>
-        <p class="name-en">Headshot Studio</p>
-        <p class="desc">上传你的照片 · Gemini 帮你生成证件照、形象照、场景照 · 商务套装、艺术指导、时装编辑 等十几种身份风格。</p>
-        <div class="tags">
-          <span class="tag">Gemini</span>
-          <span class="tag">AI 头像</span>
-          <span class="tag">三模式</span>
+    <a class="door d4" href="https://headshot-psi-indol.vercel.app" target="_blank" rel="noopener" data-y="216">
+      <span class="door-scanlines"></span>
+      <div class="door-inner">
+        <div class="door-num">04</div>
+        <div class="door-icon">👔</div>
+        <div class="door-title-wrap">
+          <div class="door-zh">肖像馆</div>
+          <div class="door-en">Headshot</div>
         </div>
-        <span class="cta">生成头像</span>
+        <div class="door-cta">Enter</div>
       </div>
     </a>
 
-    <a class="project-card" href="https://ai-mvp-psi.vercel.app" target="_blank" rel="noopener" style="--cover-bg: linear-gradient(135deg, #FDEFF9, #E8ECFF, #E3F6FF);">
-      <div class="cover" style="background: linear-gradient(135deg, #FDEFF9, #E8ECFF, #E3F6FF);"><span class="cover-emoji">🎭</span></div>
-      <div class="body">
-        <div class="num">05 · AI Studio</div>
-        <h3 class="name-zh">私人美术馆</h3>
-        <p class="name-en">Private Gallery</p>
-        <p class="desc">把艺术作品放到你家墙上看看效果 · 上传一张家里的房间照 + 一张艺术品 · Gemini 帮你看挂上去合不合适。</p>
-        <div class="tags">
-          <span class="tag">Gemini</span>
-          <span class="tag">AI 合成</span>
-          <span class="tag">家居预览</span>
+    <a class="door d5" href="https://ai-mvp-psi.vercel.app" target="_blank" rel="noopener" data-y="288">
+      <span class="door-scanlines"></span>
+      <div class="door-inner">
+        <div class="door-num">05</div>
+        <div class="door-icon">🎭</div>
+        <div class="door-title-wrap">
+          <div class="door-zh">私人美术馆</div>
+          <div class="door-en">Private Gallery</div>
         </div>
-        <span class="cta">挂到墙上</span>
+        <div class="door-cta">Enter</div>
       </div>
     </a>
 
   </div>
-</section>
+  <div class="core"></div>
+</div>
 
-<div class="divider"></div>
+<div class="side-meta">
+  <div class="row">5 DOORS · 5 ROOMS <span class="dot"></span></div>
+  <div>by Jane · @xiaoerzhan</div>
+</div>
 
-<!-- ============ ABOUT ============ -->
-<section id="about" class="about">
-  <div class="section-label">About · 关于</div>
-  <svg class="wavy" viewBox="0 0 1200 14" preserveAspectRatio="none" width="100%" height="14">
-    <path d="M0 7 Q60 3 120 7 Q180 11 240 7 Q300 3 380 7 Q460 11 540 7 Q620 3 700 7 Q780 11 860 7 Q940 3 1020 8 Q1080 11 1140 7 Q1170 4 1200 7" stroke="#1a1a1a" stroke-width="1.2" fill="none"/>
-  </svg>
-  <div class="about-wrap">
-    <p class="poetic">"做一些会让人停下来三秒钟的小东西。"</p>
-    <p>小耳(Jane)是一位独立创作者,日常在 AI、视频、3D、设计之间穿梭。这里收集了几个不需要解释、打开就能玩的小项目。每个都是一次小小的尝试 — 看看技术能不能变得更温柔一点、更像玩具一点。</p>
-    <p>如果你喜欢其中任何一个,欢迎在 <a href="https://x.com/xiaoerzhan" target="_blank" rel="noopener" style="color: var(--ink); border-bottom: 1px solid currentColor;">X (@xiaoerzhan)</a> 上告诉我。</p>
-  </div>
-</section>
+<div class="hud">
+  <span class="hint-key">DRAG</span> rotate &nbsp;·&nbsp; <span class="hint-key">CLICK</span> enter a room
+</div>
 
-<div class="divider"></div>
-
-<!-- ============ CONTACT ============ -->
-<section id="contact" class="contact">
-  <div class="section-label">Contact · 联系</div>
-  <svg class="wavy" viewBox="0 0 1200 14" preserveAspectRatio="none" width="100%" height="14">
-    <path d="M0 7 Q60 3 120 7 Q180 11 240 7 Q300 3 380 7 Q460 11 540 7 Q620 3 700 7 Q780 11 860 7 Q940 3 1020 8 Q1080 11 1140 7 Q1170 4 1200 7" stroke="#1a1a1a" stroke-width="1.2" fill="none"/>
-  </svg>
-  <div class="contact-grid">
-    <div class="contact-cell">
-      <div class="contact-label">X / Twitter</div>
-      <a class="contact-handle" href="https://x.com/xiaoerzhan" target="_blank" rel="noopener">@xiaoerzhan</a>
-    </div>
-    <div class="contact-cell">
-      <div class="contact-label">Email</div>
-      <a class="contact-handle" href="mailto:xiaoerzhan@gmail.com">xiaoerzhan@gmail.com</a>
-    </div>
-    <div class="contact-cell">
-      <div class="contact-label">Portfolio</div>
-      <a class="contact-handle" href="https://xiaoerai.xyz" target="_blank" rel="noopener">xiaoerai.xyz</a>
-    </div>
-    <div class="contact-cell">
-      <div class="contact-label">GitHub</div>
-      <a class="contact-handle" href="https://github.com/Jane-xiaoer" target="_blank" rel="noopener">@Jane-xiaoer</a>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FOOTER ============ -->
-<footer>
-  <div class="mark">XIAOER</div>
-  <div class="sub">/ 小耳的小屋</div>
-  <div>©2026 · Made with <span style="color:#e06868">♥</span> · Hosted on Vercel</div>
-</footer>
-
-<!-- ────────────────────────────────────────────────────────────
-     Scripts — Matter.js + interactive layer (xiaoer-artstudio-design v2.0)
-     ──────────────────────────────────────────────────────────── -->
-<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
-<script src="js/interactive.js"></script>
 <script>
-  // Nav scroll state
-  (function navScroll() {
-    const nav = document.getElementById('main-nav');
-    window.addEventListener('scroll', () => {
-      nav.classList.toggle('scrolled', window.scrollY > 50);
-    }, { passive: true });
-  })();
+(function () {
+  const pentagon = document.getElementById('pentagon');
+  const stage    = document.getElementById('stage');
 
-  // Physics garden — 6 decorative SVGs in hero
-  const { initPhysicsGarden } = window.xiaoerInteractive;
-  initPhysicsGarden('#hero', {
-    svgContainerSelector: '.hero-illustrations',
-    cfg: [
-      { r: 130, xf: 0.10, y0: -320, res: 0.30, fa: 0.014 },  // A 粉橙石
-      { r:  44, xf: 0.42, y0: -500, res: 0.50, fa: 0.024 },  // B 茎+果
-      { r:  98, xf: 0.75, y0: -260, res: 0.34, fa: 0.016 },  // C 粉花石
-      { r:  20, xf: 0.92, y0: -100, res: 0.55, fa: 0.028 },  // D 莱姆十字
-      { r: 105, xf: 0.88, y0: -380, res: 0.28, fa: 0.013 },  // E 蓝绿叶石
-      { r:  58, xf: 0.25, y0: -180, res: 0.42, fa: 0.018 },  // F 红钻花
-    ],
+  // Camera-orbit state
+  let rotation   = 0;          // degrees
+  let velocity   = 0;          // for inertia
+  let tilt       = -8;         // base X rotation
+  let dragging   = false;
+  let lastX      = 0;
+  let lastY      = 0;
+  let lastTime   = 0;
+
+  // Auto-rotation when idle
+  let lastInteractTime = performance.now();
+  const IDLE_THRESHOLD_MS = 2500;
+  const AUTO_SPEED        = 0.08; // deg per frame
+
+  function applyTransform() {
+    pentagon.style.setProperty('--rotation', rotation + 'deg');
+    pentagon.style.setProperty('--tilt',     tilt     + 'deg');
+  }
+  applyTransform();
+
+  function onDragStart(e) {
+    if (e.target.closest('.door')) {
+      // Allow click on doors to still work — only start drag from empty space.
+      // But we want drag-then-click to also work. So we track movement first.
+    }
+    dragging = true;
+    document.documentElement.classList.add('dragging');
+    const point = e.touches ? e.touches[0] : e;
+    lastX = point.clientX;
+    lastY = point.clientY;
+    lastTime = performance.now();
+    velocity = 0;
+  }
+  function onDragMove(e) {
+    if (!dragging) return;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - lastX;
+    const dy = point.clientY - lastY;
+    const now = performance.now();
+    const dt = Math.max(now - lastTime, 1);
+
+    rotation += dx * 0.4;
+    tilt = Math.max(-30, Math.min(15, tilt - dy * 0.15));
+    velocity = (dx * 0.4) / (dt / 16);   // px/16ms ~= deg/frame
+
+    lastX = point.clientX;
+    lastY = point.clientY;
+    lastTime = now;
+    lastInteractTime = now;
+    applyTransform();
+  }
+  function onDragEnd() {
+    if (!dragging) return;
+    dragging = false;
+    document.documentElement.classList.remove('dragging');
+  }
+
+  // Mouse
+  stage.addEventListener('mousedown', onDragStart);
+  window.addEventListener('mousemove', onDragMove);
+  window.addEventListener('mouseup',   onDragEnd);
+
+  // Touch
+  stage.addEventListener('touchstart', onDragStart, { passive: true });
+  window.addEventListener('touchmove', onDragMove,  { passive: true });
+  window.addEventListener('touchend',  onDragEnd);
+
+  // Click handling — short anim then navigate
+  document.querySelectorAll('.door').forEach((door) => {
+    let mouseDownX = 0, mouseDownY = 0;
+    door.addEventListener('mousedown', (e) => {
+      mouseDownX = e.clientX;
+      mouseDownY = e.clientY;
+    });
+    door.addEventListener('click', (e) => {
+      const dx = Math.abs(e.clientX - mouseDownX);
+      const dy = Math.abs(e.clientY - mouseDownY);
+      // If they dragged > 5px, treat as drag not click
+      if (dx > 5 || dy > 5) {
+        e.preventDefault();
+        return;
+      }
+      // Door-opening animation
+      e.preventDefault();
+      const y = door.dataset.y || '0';
+      door.style.setProperty('--y-base', y + 'deg');
+      door.classList.add('opening');
+      const href = door.href;
+      setTimeout(() => {
+        window.open(href, '_blank', 'noopener');
+        // Restore door after a moment
+        setTimeout(() => door.classList.remove('opening'), 800);
+      }, 480);
+    });
   });
+
+  // Animation loop — inertia + auto-rotate when idle
+  function tick() {
+    const now = performance.now();
+    if (!dragging) {
+      // Inertia
+      if (Math.abs(velocity) > 0.02) {
+        rotation += velocity;
+        velocity *= 0.94;
+        lastInteractTime = now;
+      }
+      // Auto-rotate when idle
+      else if (now - lastInteractTime > IDLE_THRESHOLD_MS) {
+        rotation += AUTO_SPEED;
+      }
+      // Tilt slowly back to default
+      if (Math.abs(tilt - (-8)) > 0.05 && now - lastInteractTime > IDLE_THRESHOLD_MS) {
+        tilt += ((-8) - tilt) * 0.02;
+      }
+      applyTransform();
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // Wheel: vertical mouse wheel changes tilt
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    tilt = Math.max(-30, Math.min(15, tilt + e.deltaY * 0.05));
+    lastInteractTime = performance.now();
+    applyTransform();
+  }, { passive: false });
+})();
 </script>
 
 </body>

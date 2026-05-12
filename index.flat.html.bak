@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>小耳 · Hub</title>
+<meta name="description" content="小耳 Jane 的互动项目集 — 相机博物馆 · 3D 城市 · 神经舞蹈" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=DM+Serif+Display:ital@0;1&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #ffffff;
+    --ink:    #111111;
+    --line:   #1a1a1a;
+    --muted:  #888888;
+    --body:   #444444;
+
+    --pastel-mint:   #CCE8B0;
+    --pastel-cream:  #FEFCE0;
+    --pastel-cherry: #FFE5E5;
+    --pastel-sky:    #C2EEF7;
+    --accent: #c8ff00;
+
+    --serif: 'DM Serif Display', 'Noto Serif SC', Georgia, serif;
+    --hand:  'Caveat', cursive;
+    --sans:  system-ui, -apple-system, 'Helvetica Neue', 'PingFang SC', sans-serif;
+
+    --nav-h: 64px;
+    --section-pad-y: 96px;
+    --section-pad-x: max(40px, 6vw);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--body);
+    background: var(--canvas);
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  /* ----- Nav ----- */
+  nav.brand {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--nav-h);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 var(--section-pad-x);
+    background: rgba(255,255,255,0.0);
+    backdrop-filter: blur(0);
+    transition: background .4s, backdrop-filter .4s;
+    z-index: 50;
+  }
+  nav.brand.scrolled {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(14px);
+    border-bottom: 0.5px solid rgba(0,0,0,0.06);
+  }
+  nav.brand .mark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 20px;
+    color: var(--ink);
+  }
+  nav.brand .sub {
+    font-family: var(--hand);
+    font-size: 18px;
+    color: var(--muted);
+    margin-left: 8px;
+  }
+  nav .links { display: flex; gap: 24px; font-size: 13px; }
+  nav .links a:hover { color: var(--accent-fg, var(--ink)); opacity: .7; }
+
+  /* ----- Section base ----- */
+  section { padding: var(--section-pad-y) var(--section-pad-x); position: relative; overflow: hidden; }
+  .divider {
+    height: 16px;
+    background-image: radial-gradient(circle, #5a8a38 1.5px, transparent 1.5px);
+    background-size: 16px 16px;
+    background-repeat: repeat-x;
+    background-position: center;
+  }
+  .section-label {
+    font-family: var(--hand);
+    font-size: 32px;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .section-label + svg.wavy { display: block; margin-bottom: 56px; max-width: 1200px; }
+
+  /* ----- Hero + physics garden ----- */
+  .hero {
+    position: relative; overflow: hidden;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding-top: calc(var(--nav-h) + 48px);
+    cursor: grab;
+  }
+  .hero-eyebrow {
+    font-family: var(--hand);
+    font-size: 22px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+  }
+  .hero-text {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(40px, 7vw, 76px);
+    line-height: 1.15;
+    color: var(--ink);
+    text-align: center;
+    max-width: 12em;
+    margin: 0 auto 16px;
+    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+  }
+  .hero-sub {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--body);
+    text-align: center;
+    max-width: 32em;
+    margin: 0 auto;
+    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 400ms both;
+  }
+  @keyframes heroTextIn {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero-illustrations {
+    position: absolute; inset: 0; pointer-events: none;
+  }
+  .hero-illustrations svg {
+    position: absolute; opacity: 0; will-change: transform;
+  }
+  .hero-hint {
+    position: absolute; bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--hand);
+    font-size: 16px;
+    color: var(--muted);
+    opacity: 0.7;
+    pointer-events: none;
+    animation: heroTextIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 1200ms both;
+  }
+
+  /* ----- Projects grid ----- */
+  .projects {
+    background: var(--pastel-cream);
+  }
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .project-card {
+    position: relative;
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+    transition: opacity .24s ease;
+    display: flex; flex-direction: column;
+  }
+  .project-card:hover { opacity: 0.92; }
+  .project-card .cover {
+    aspect-ratio: 16 / 10;
+    background: var(--cover-bg, #f0f0f0);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .project-card .cover-emoji {
+    font-size: 100px;
+    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.1));
+  }
+  .project-card .body {
+    padding: 22px 24px 26px;
+  }
+  .project-card .num {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .project-card .name-zh {
+    font-family: var(--serif);
+    font-size: 24px;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .project-card .name-en {
+    font-family: var(--hand);
+    font-size: 18px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .project-card .desc {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--body);
+    margin-bottom: 14px;
+  }
+  .project-card .tags {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .project-card .tag {
+    font-size: 10.5px;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    color: var(--ink);
+  }
+  .project-card .cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .project-card .cta::after { content: '→'; transition: transform .24s ease; }
+  .project-card:hover .cta::after { transform: translateX(4px); }
+
+  .project-card.coming-soon {
+    background: transparent;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .project-card.coming-soon .cover {
+    background: transparent;
+  }
+  .project-card.coming-soon .cover-emoji { opacity: 0.35; }
+  .project-card.coming-soon:hover { opacity: 1; cursor: default; }
+  .project-card.coming-soon .cta { color: var(--muted); }
+
+  /* ----- About ----- */
+  .about {
+    background: white;
+  }
+  .about-wrap {
+    max-width: 880px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr; gap: 16px;
+  }
+  .about p {
+    font-size: 16px;
+    line-height: 1.9;
+    color: var(--body);
+  }
+  .about p.poetic {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--ink);
+    line-height: 1.5;
+    margin: 8px 0 20px;
+  }
+
+  /* ----- Contact ----- */
+  .contact {
+    background: var(--pastel-sky);
+  }
+  .contact-grid {
+    max-width: 1000px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 32px;
+  }
+  .contact-cell {
+    padding: 16px 0;
+    border-bottom: 1px dashed rgba(0,0,0,0.15);
+  }
+  .contact-label {
+    font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .contact-handle {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink);
+  }
+
+  /* ----- Footer ----- */
+  footer {
+    text-align: center;
+    padding: 64px 24px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  footer .mark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  footer .sub {
+    font-family: var(--hand);
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* ----- Accessibility ----- */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0ms !important;
+    }
+  }
+
+  /* ----- Responsive ----- */
+  @media (max-width: 700px) {
+    nav .links { display: none; }
+    .hero-illustrations svg { transform: scale(0.7); }
+  }
+</style>
+</head>
+<body>
+
+<nav class="brand" id="main-nav">
+  <div>
+    <span class="mark">XIAOER</span><span class="sub">/ 小耳的小屋</span>
+  </div>
+  <div class="links">
+    <a href="#projects">项目</a>
+    <a href="#about">关于</a>
+    <a href="#contact">联系</a>
+  </div>
+</nav>
+
+<!-- ============ HERO + PHYSICS GARDEN ============ -->
+<section id="hero" class="hero">
+  <div class="hero-eyebrow">uki uki · doki doki ·</div>
+  <h1 class="hero-text">
+    日常微小欢喜<br>
+    偶尔心跳加速
+  </h1>
+  <p class="hero-sub">
+    小耳 Jane 做的几个互动项目 · 相机 · 城市 · 舞蹈 · 试试看会发生什么。
+  </p>
+  <p class="hero-hint">↓ 拖拽试试 · drag the floating things</p>
+
+  <div class="hero-illustrations">
+    <!-- Shape A: 大粉橙石 -->
+    <svg width="280" height="260" viewBox="0 0 420 395">
+      <g opacity="0.92">
+        <path d="M30 220 Q42 92 178 52 Q292 18 362 98 Q402 158 387 262 Q368 332 272 358 Q172 382 100 332 Q28 292 30 220Z" fill="#f0b0c0" stroke="#1a1a1a" stroke-width="2.5"/>
+        <path d="M30 220 Q48 132 140 92 Q222 65 294 88 Q272 142 232 166 Q182 186 132 186 Q68 186 30 220Z" fill="#98b8d8" stroke="#1a1a1a" stroke-width="1.5"/>
+        <path d="M76 228 Q128 208 188 224 Q248 238 302 218" fill="none" stroke="#d8d820" stroke-width="4" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <!-- Shape B: 绿茎黄果 -->
+    <svg width="110" height="280" viewBox="-14 0 150 370">
+      <g opacity="0.94">
+        <path d="M63 342 Q58 262 65 182 Q68 122 63 28" stroke="#4a9855" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <circle cx="12" cy="160" r="18" fill="#d8d825" stroke="#5a6018" stroke-width="2"/>
+        <circle cx="114" cy="140" r="18" fill="#d8d825" stroke="#5a6018" stroke-width="2"/>
+        <circle cx="63"  cy="24"  r="20" fill="#d8d825" stroke="#5a6018" stroke-width="2"/>
+      </g>
+    </svg>
+    <!-- Shape C: 粉花石 -->
+    <svg width="200" height="200" viewBox="0 0 295 305">
+      <g opacity="0.9">
+        <path d="M18 148 Q13 78 73 38 Q128 3 198 23 Q253 48 268 108 Q278 162 248 203 Q213 246 153 256 Q88 266 43 228 Q13 203 18 148Z" fill="#f0a8b8" stroke="#1a1a1a" stroke-width="2.5"/>
+        <path d="M53 138 Q72 83 143 68 Q203 58 238 103 Q228 148 198 168 Q158 186 113 178 Q68 168 53 138Z" fill="#78b8c8" stroke="#1a1a1a" stroke-width="1.5"/>
+      </g>
+    </svg>
+    <!-- Shape D: 莱姆十字(唯一高饱和) -->
+    <svg width="40" height="40" viewBox="0 0 56 56">
+      <g opacity="0.92">
+        <line x1="28" y1="4"  x2="28" y2="52" stroke="#c8ff00" stroke-width="5" stroke-linecap="round"/>
+        <line x1="4"  y1="28" x2="52" y2="28" stroke="#c8ff00" stroke-width="5" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <!-- Shape E: 蓝绿叶石 -->
+    <svg width="220" height="240" viewBox="0 0 310 370">
+      <g opacity="0.92">
+        <path d="M8 198 Q13 88 98 38 Q168 3 238 33 Q292 62 295 142 Q298 213 256 272 Q208 333 138 346 Q73 358 28 308 Q3 268 8 198Z" fill="#60b8a0" stroke="#1a1a1a" stroke-width="2.5"/>
+        <path d="M48 188 Q62 118 133 88 Q193 68 242 108 Q266 152 252 203 Q228 248 178 263 Q123 276 78 246 Q43 223 48 188Z" fill="#98d870" stroke="#1a1a1a" stroke-width="1.5"/>
+      </g>
+    </svg>
+    <!-- Shape F: 红钻花 -->
+    <svg width="115" height="155" viewBox="0 0 170 215">
+      <g opacity="0.82">
+        <path d="M35 195 Q32 140 40 88"  stroke="#88c890" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M80 198 Q83 138 75 82"  stroke="#88c890" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <polygon points="40,88 28,68 40,50 52,68" fill="#e06868" opacity="0.9"/>
+        <polygon points="75,82 63,62 75,44 87,62" fill="#e06868" opacity="0.9"/>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ PROJECTS ============ -->
+<section id="projects" class="projects">
+  <div class="section-label">Projects · 互动项目</div>
+  <svg class="wavy" viewBox="0 0 1200 14" preserveAspectRatio="none" width="100%" height="14">
+    <path d="M0 7 Q60 3 120 7 Q180 11 240 7 Q300 3 380 7 Q460 11 540 7 Q620 3 700 7 Q780 11 860 7 Q940 3 1020 8 Q1080 11 1140 7 Q1170 4 1200 7" stroke="#1a1a1a" stroke-width="1.2" fill="none"/>
+  </svg>
+
+  <div class="projects-grid">
+
+    <a class="project-card" href="https://camera-museum-nine.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #f4f4f0;">
+      <div class="cover"><span class="cover-emoji">🎞️</span></div>
+      <div class="body">
+        <div class="num">01 · AI Studio</div>
+        <h3 class="name-zh">相机博物馆</h3>
+        <p class="name-en">ChronoLens</p>
+        <p class="desc">上传一张照片,让 Gemini 把它变成 1850s 银版、1860s 湿版、1890s 大画幅、1975 拍立得… 摄影史上的每台老相机风格。</p>
+        <div class="tags">
+          <span class="tag">Gemini 3</span>
+          <span class="tag">AI 图像</span>
+          <span class="tag">复古</span>
+        </div>
+        <span class="cta">进入博物馆</span>
+      </div>
+    </a>
+
+    <a class="project-card" href="https://city-threejs.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #bfe3dd;">
+      <div class="cover"><span class="cover-emoji">🏙️</span></div>
+      <div class="body">
+        <div class="num">02 · Three.js + MediaPipe</div>
+        <h3 class="name-zh">3D 城市</h3>
+        <p class="name-en">Xiaoer City</p>
+        <p class="desc">一个日式小街的 3D 模型 · 在摄像头前用手势控制视角 · 招财猫坐在屋顶等你。</p>
+        <div class="tags">
+          <span class="tag">Three.js</span>
+          <span class="tag">手势识别</span>
+          <span class="tag">摄像头</span>
+        </div>
+        <span class="cta">进城逛逛</span>
+      </div>
+    </a>
+
+    <a class="project-card" href="https://dance-beta.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #1a1a1a; color: white;">
+      <div class="cover" style="background:#0a0c10"><span class="cover-emoji">💃</span></div>
+      <div class="body">
+        <div class="num">03 · Neural Filter</div>
+        <h3 class="name-zh">神经舞蹈</h3>
+        <p class="name-en">Starry Vision</p>
+        <p class="desc">小耳请你跳支舞 · 摄像头看着你 · 实时把画面变成梵高星空 / 向日葵 / 表现主义 · 60FPS 粒子神经滤镜。</p>
+        <div class="tags">
+          <span class="tag">Canvas</span>
+          <span class="tag">梵高</span>
+          <span class="tag">摄像头</span>
+        </div>
+        <span class="cta">开始跳舞</span>
+      </div>
+    </a>
+
+    <a class="project-card" href="https://headshot-psi-indol.vercel.app" target="_blank" rel="noopener" style="--cover-bg: #fde2e7;">
+      <div class="cover" style="background: #fde2e7;"><span class="cover-emoji">👔</span></div>
+      <div class="body">
+        <div class="num">04 · AI Studio</div>
+        <h3 class="name-zh">肖像馆</h3>
+        <p class="name-en">Headshot Studio</p>
+        <p class="desc">上传你的照片 · Gemini 帮你生成证件照、形象照、场景照 · 商务套装、艺术指导、时装编辑 等十几种身份风格。</p>
+        <div class="tags">
+          <span class="tag">Gemini</span>
+          <span class="tag">AI 头像</span>
+          <span class="tag">三模式</span>
+        </div>
+        <span class="cta">生成头像</span>
+      </div>
+    </a>
+
+    <a class="project-card" href="https://ai-mvp-psi.vercel.app" target="_blank" rel="noopener" style="--cover-bg: linear-gradient(135deg, #FDEFF9, #E8ECFF, #E3F6FF);">
+      <div class="cover" style="background: linear-gradient(135deg, #FDEFF9, #E8ECFF, #E3F6FF);"><span class="cover-emoji">🎭</span></div>
+      <div class="body">
+        <div class="num">05 · AI Studio</div>
+        <h3 class="name-zh">私人美术馆</h3>
+        <p class="name-en">Private Gallery</p>
+        <p class="desc">把艺术作品放到你家墙上看看效果 · 上传一张家里的房间照 + 一张艺术品 · Gemini 帮你看挂上去合不合适。</p>
+        <div class="tags">
+          <span class="tag">Gemini</span>
+          <span class="tag">AI 合成</span>
+          <span class="tag">家居预览</span>
+        </div>
+        <span class="cta">挂到墙上</span>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ ABOUT ============ -->
+<section id="about" class="about">
+  <div class="section-label">About · 关于</div>
+  <svg class="wavy" viewBox="0 0 1200 14" preserveAspectRatio="none" width="100%" height="14">
+    <path d="M0 7 Q60 3 120 7 Q180 11 240 7 Q300 3 380 7 Q460 11 540 7 Q620 3 700 7 Q780 11 860 7 Q940 3 1020 8 Q1080 11 1140 7 Q1170 4 1200 7" stroke="#1a1a1a" stroke-width="1.2" fill="none"/>
+  </svg>
+  <div class="about-wrap">
+    <p class="poetic">"做一些会让人停下来三秒钟的小东西。"</p>
+    <p>小耳(Jane)是一位独立创作者,日常在 AI、视频、3D、设计之间穿梭。这里收集了几个不需要解释、打开就能玩的小项目。每个都是一次小小的尝试 — 看看技术能不能变得更温柔一点、更像玩具一点。</p>
+    <p>如果你喜欢其中任何一个,欢迎在 <a href="https://x.com/xiaoerzhan" target="_blank" rel="noopener" style="color: var(--ink); border-bottom: 1px solid currentColor;">X (@xiaoerzhan)</a> 上告诉我。</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ CONTACT ============ -->
+<section id="contact" class="contact">
+  <div class="section-label">Contact · 联系</div>
+  <svg class="wavy" viewBox="0 0 1200 14" preserveAspectRatio="none" width="100%" height="14">
+    <path d="M0 7 Q60 3 120 7 Q180 11 240 7 Q300 3 380 7 Q460 11 540 7 Q620 3 700 7 Q780 11 860 7 Q940 3 1020 8 Q1080 11 1140 7 Q1170 4 1200 7" stroke="#1a1a1a" stroke-width="1.2" fill="none"/>
+  </svg>
+  <div class="contact-grid">
+    <div class="contact-cell">
+      <div class="contact-label">X / Twitter</div>
+      <a class="contact-handle" href="https://x.com/xiaoerzhan" target="_blank" rel="noopener">@xiaoerzhan</a>
+    </div>
+    <div class="contact-cell">
+      <div class="contact-label">Email</div>
+      <a class="contact-handle" href="mailto:xiaoerzhan@gmail.com">xiaoerzhan@gmail.com</a>
+    </div>
+    <div class="contact-cell">
+      <div class="contact-label">Portfolio</div>
+      <a class="contact-handle" href="https://xiaoerai.xyz" target="_blank" rel="noopener">xiaoerai.xyz</a>
+    </div>
+    <div class="contact-cell">
+      <div class="contact-label">GitHub</div>
+      <a class="contact-handle" href="https://github.com/Jane-xiaoer" target="_blank" rel="noopener">@Jane-xiaoer</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="mark">XIAOER</div>
+  <div class="sub">/ 小耳的小屋</div>
+  <div>©2026 · Made with <span style="color:#e06868">♥</span> · Hosted on Vercel</div>
+</footer>
+
+<!-- ────────────────────────────────────────────────────────────
+     Scripts — Matter.js + interactive layer (xiaoer-artstudio-design v2.0)
+     ──────────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+<script src="js/interactive.js"></script>
+<script>
+  // Nav scroll state
+  (function navScroll() {
+    const nav = document.getElementById('main-nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 50);
+    }, { passive: true });
+  })();
+
+  // Physics garden — 6 decorative SVGs in hero
+  const { initPhysicsGarden } = window.xiaoerInteractive;
+  initPhysicsGarden('#hero', {
+    svgContainerSelector: '.hero-illustrations',
+    cfg: [
+      { r: 130, xf: 0.10, y0: -320, res: 0.30, fa: 0.014 },  // A 粉橙石
+      { r:  44, xf: 0.42, y0: -500, res: 0.50, fa: 0.024 },  // B 茎+果
+      { r:  98, xf: 0.75, y0: -260, res: 0.34, fa: 0.016 },  // C 粉花石
+      { r:  20, xf: 0.92, y0: -100, res: 0.55, fa: 0.028 },  // D 莱姆十字
+      { r: 105, xf: 0.88, y0: -380, res: 0.28, fa: 0.013 },  // E 蓝绿叶石
+      { r:  58, xf: 0.25, y0: -180, res: 0.42, fa: 0.018 },  // F 红钻花
+    ],
+  });
+</script>
+
+</body>
+</html>
