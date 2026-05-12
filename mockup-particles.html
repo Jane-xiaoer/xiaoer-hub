@@ -762,12 +762,9 @@ window.addEventListener('wheel', e => {
   zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomTarget * factor));
 }, { passive: false });
 
-// Click on canvas = confirm if user has locked in a shape
-canvas.addEventListener('click', () => {
-  if (mode === 'locked' && targetIdx >= 0 && !morphing) {
-    window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
-  }
-});
+// (Removed: canvas click → navigate. A click on the canvas is too easy to
+// fire accidentally — every drag-release synthesises a click. Entry is now
+// only via the confirm button or the Enter key.)
 
 // ─── Resize ──────────────────────────────────────────────────
 window.addEventListener('resize', () => {
