@@ -749,6 +749,12 @@ function selectRoom(idx, opts = {}) {
   uniforms.uColorA.value.setHex(currentIdx < 0 ? 0xffffff : ROOMS[currentIdx].color);
   uniforms.uColorB.value.setHex(ROOMS[idx].color);
 
+  // Reset progress so the morph genuinely starts from aA (current shape).
+  // We do this ONLY here — never at morph completion — because uProgress=0
+  // in the shader renders aA, and we want the FORMED shape (aB) to persist
+  // between morphs.
+  uniforms.uProgress.value = 0;
+
   targetIdx = idx;
   morphing = true;
   morphStart = clock.getElapsedTime();
@@ -862,11 +868,10 @@ function animate() {
     if (t >= 1.0) {
       morphing = false;
       currentIdx = targetIdx;
-      uniforms.uProgress.value = 0;
-      // When settled into a shape, suppress idle drift (shape stays readable).
-      // When sitting in raw nebula, allow full drift.
+      // ⚠️ Do NOT reset uProgress here — it stays at 1 so the shader keeps
+      // showing aB (the just-formed shape). Resetting to 0 would snap the
+      // swarm back to aA (the PREVIOUS shape) — that was the bug Jane hit.
       uniforms.uIdle.value = currentIdx < 0 ? 1.0 : 0.08;
-      // Auto mode: schedule the next advance now that this morph is done.
       if (mode === 'auto' && currentIdx >= 0) {
         autoHoldEnd = elapsed + AUTO_HOLD;
       }
