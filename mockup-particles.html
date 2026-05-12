@@ -242,6 +242,70 @@
     border-radius: 2px;
   }
 
+  /* ─── Gesture mode panel ─── */
+  .gesture-toggle {
+    position: fixed;
+    top: 22px; right: 32px;
+    z-index: 11;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 100px;
+    background: rgba(10, 8, 18, 0.55);
+    backdrop-filter: blur(10px);
+    font-family: "Cutive Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .gesture-toggle:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+  .gesture-toggle.active { color: #ff7c3a; border-color: #ff7c3a; box-shadow: 0 0 18px rgba(255,124,58,0.4); }
+  .gesture-toggle .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+  }
+  .gesture-toggle.active .dot {
+    background: #ff7c3a;
+    box-shadow: 0 0 8px #ff7c3a;
+    animation: gestureDot 1.6s ease-in-out infinite;
+  }
+  @keyframes gestureDot { 50% { opacity: 0.3; } }
+
+  #gesture-video {
+    position: fixed;
+    top: 76px; right: 32px;
+    width: 220px; height: 165px;
+    z-index: 11;
+    border-radius: 8px;
+    border: 1px solid rgba(255,124,58,0.4);
+    background: #000;
+    transform: scaleX(-1);   /* mirror — feels natural */
+    object-fit: cover;
+    display: none;
+  }
+  #gesture-video.visible { display: block; }
+
+  .gesture-hud {
+    position: fixed;
+    top: 250px; right: 32px;
+    z-index: 11;
+    font-family: "Cutive Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    text-align: right;
+    line-height: 1.9;
+    display: none;
+  }
+  .gesture-hud.visible { display: block; }
+  .gesture-hud .row { display: flex; justify-content: flex-end; gap: 10px; }
+  .gesture-hud .key { color: #ff7c3a; }
+
   @media (max-width: 700px) {
     .centre-label .zh { font-size: 28px; }
     .centre-label, .idle-hint { transform: translate(-50%, calc(-50% - 160px)); }
@@ -249,12 +313,25 @@
     .dock-divider { display: none; }
     .dock-btn .label { display: none; }
     .side-hint { display: none; }
+    .gesture-toggle { top: 16px; right: 16px; padding: 6px 10px; font-size: 9px; }
+    #gesture-video, .gesture-hud { display: none !important; }
   }
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
+
+<button class="gesture-toggle" id="gestureToggle">
+  <span class="dot"></span>
+  <span>手势模式</span>
+</button>
+<video id="gesture-video" autoplay muted playsinline></video>
+<div class="gesture-hud" id="gestureHud">
+  <div class="row"><span class="key">← →</span> swipe to cycle</div>
+  <div class="row"><span class="key">✊ ↔ ✋</span> pinch to zoom</div>
+  <div class="row"><span class="key">👌</span> OK to enter</div>
+</div>
 
 <nav>
   <div class="mark"><span class="ear">👂</span><span style="font-style:italic">XIAOER</span> · 五馆</div>
@@ -264,8 +341,8 @@
 <div class="hud-top">CHOOSE A ROOM</div>
 
 <div class="idle-hint" id="idleHint">
-  <div class="label">— 选一个馆 —</div>
-  <div class="sub">arrow keys · scroll · or click below</div>
+  <div class="label">— 点一个馆 —</div>
+  <div class="sub">click a shape below to lock it · auto-cycling otherwise</div>
 </div>
 
 <div class="centre-label" id="label" style="opacity:0">
@@ -281,10 +358,14 @@
 <button class="confirm" id="confirm">Enter</button>
 
 <div class="side-hint">
-  <div><span class="key">← →</span> select</div>
-  <div><span class="key">Enter</span> confirm</div>
-  <div><span class="key">Esc</span> back</div>
+  <div><span class="key">CLICK</span> lock shape</div>
+  <div><span class="key">Enter</span> enter room</div>
+  <div><span class="key">Esc</span> resume auto</div>
 </div>
+
+<!-- MediaPipe Hands (loaded lazily — but tags here so namespace exists) -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
 <script type="importmap">
 {
@@ -596,8 +677,8 @@ ROOMS.forEach((r, i) => {
     <div class="ico">${ICON_SVG[r.shape]}</div>
     <div class="label">${r.zh}</div>
   `;
-  btn.addEventListener('mouseenter', () => selectRoom(i));
-  btn.addEventListener('click',      () => selectRoom(i));
+  // CLICK ONLY — hover gives UI feedback but doesn't morph the swarm.
+  btn.addEventListener('click', () => selectRoom(i, { lock: true }));
   dock.appendChild(btn);
   if (i < ROOMS.length - 1) {
     const div = document.createElement('div'); div.className = 'dock-divider';
@@ -611,7 +692,10 @@ let currentIdx = -1;       // -1 = idle nebula
 let targetIdx  = -1;
 let morphStart = 0;
 let morphing   = false;
-const MORPH_DURATION = 2.2;   // longer = more stable feel
+let mode = 'auto';         // 'auto' = self-cycling | 'locked' = user picked, stay put
+let autoHoldEnd = 0;       // next time we should auto-advance
+const MORPH_DURATION = 2.2;
+const AUTO_HOLD = 4.5;     // seconds to hold a shape in auto mode before advancing
 
 const labelEl     = document.getElementById('label');
 const idleHintEl  = document.getElementById('idleHint');
@@ -633,17 +717,28 @@ function paintRoom(idx) {
   dockBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
 }
 
-function selectRoom(idx) {
+function selectRoom(idx, opts = {}) {
+  const { lock = false } = opts;
+
   if (idx === targetIdx && !morphing) return;
-  if (morphing) return; // don't interrupt mid-morph for snappiness
-  // First selection from idle: hide hint, show label
-  if (currentIdx < 0) {
+  if (morphing && !lock) return;   // auto cycle: wait for current morph; user click can interrupt
+  if (idx === currentIdx && !morphing && lock) {
+    // user clicked the already-formed shape → just lock & show confirm
+    mode = 'locked';
+    paintRoom(idx);
+    confirmEl.classList.add('visible');
+    return;
+  }
+
+  // First time anything happens: hide idle hint, show label
+  if (currentIdx < 0 && targetIdx < 0) {
     idleHintEl.classList.add('hidden');
     labelEl.style.opacity = '1';
   }
+
   paintRoom(idx);
 
-  // Buffers
+  // Set morph source/target buffers
   const aA = geom.getAttribute('aTargetA');
   const aB = geom.getAttribute('aTargetB');
   aA.array.set(currentIdx < 0 ? nebula : targets[currentIdx]);
@@ -651,7 +746,6 @@ function selectRoom(idx) {
   aA.needsUpdate = true;
   aB.needsUpdate = true;
 
-  // Colors
   uniforms.uColorA.value.setHex(currentIdx < 0 ? 0xffffff : ROOMS[currentIdx].color);
   uniforms.uColorB.value.setHex(ROOMS[idx].color);
 
@@ -659,28 +753,39 @@ function selectRoom(idx) {
   morphing = true;
   morphStart = clock.getElapsedTime();
 
-  // confirm button
-  confirmEl.classList.add('visible');
+  if (lock) {
+    mode = 'locked';
+    confirmEl.classList.add('visible');
+  } else {
+    // Auto-cycle morph in progress — keep confirm hidden
+    confirmEl.classList.remove('visible');
+  }
 }
 
-function deselectToIdle() {
-  if (currentIdx < 0 && targetIdx < 0) return;
-  // morph back to nebula
-  const aA = geom.getAttribute('aTargetA');
-  const aB = geom.getAttribute('aTargetB');
-  aA.array.set(currentIdx < 0 ? nebula : targets[currentIdx]);
-  aB.array.set(nebula);
-  aA.needsUpdate = true;
-  aB.needsUpdate = true;
-  uniforms.uColorA.value.setHex(currentIdx < 0 ? 0xffffff : ROOMS[currentIdx].color);
-  uniforms.uColorB.value.setHex(0xffffff);
-  targetIdx = -1;
-  morphing = true;
-  morphStart = clock.getElapsedTime();
+// Drive auto-cycle when nobody has locked in yet
+function autoTick(elapsed) {
+  if (mode !== 'auto') return;
+  if (morphing) return;
+
+  if (currentIdx < 0) {
+    // First-ever auto morph: idle nebula → room 0
+    selectRoom(0, { lock: false });
+    autoHoldEnd = elapsed + MORPH_DURATION + AUTO_HOLD;
+    return;
+  }
+  if (elapsed >= autoHoldEnd) {
+    const next = (currentIdx + 1) % ROOMS.length;
+    selectRoom(next, { lock: false });
+    autoHoldEnd = elapsed + MORPH_DURATION + AUTO_HOLD;
+  }
+}
+
+// Esc → release the lock and resume auto-cycling from the CURRENT shape
+function backToAuto() {
+  if (mode !== 'locked') return;
+  mode = 'auto';
+  autoHoldEnd = clock.getElapsedTime() + AUTO_HOLD; // hold the current shape a bit longer
   confirmEl.classList.remove('visible');
-  labelEl.style.opacity = '0';
-  idleHintEl.classList.remove('hidden');
-  dockBtns.forEach(b => b.classList.remove('active'));
 }
 
 // Confirm → navigate
@@ -689,41 +794,41 @@ confirmEl.addEventListener('click', () => {
   window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
 });
 
-// Keyboard
+// Keyboard — same rule as the dock: any selection locks (auto-cycle stops)
 window.addEventListener('keydown', e => {
   if (e.code === 'ArrowRight' || e.code === 'ArrowDown') {
     e.preventDefault();
     const next = currentIdx < 0 ? 0 : Math.min(currentIdx + 1, ROOMS.length - 1);
-    selectRoom(next);
+    selectRoom(next, { lock: true });
   } else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') {
     e.preventDefault();
     const next = currentIdx < 0 ? 0 : Math.max(currentIdx - 1, 0);
-    selectRoom(next);
+    selectRoom(next, { lock: true });
   } else if (e.code === 'Enter') {
     e.preventDefault();
     if (targetIdx >= 0) window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
   } else if (e.code === 'Escape') {
     e.preventDefault();
-    deselectToIdle();
-  } else if (e.code === 'Digit1') selectRoom(0);
-  else if   (e.code === 'Digit2') selectRoom(1);
-  else if   (e.code === 'Digit3') selectRoom(2);
-  else if   (e.code === 'Digit4') selectRoom(3);
-  else if   (e.code === 'Digit5') selectRoom(4);
+    backToAuto();
+  } else if (e.code === 'Digit1') selectRoom(0, { lock: true });
+  else if   (e.code === 'Digit2') selectRoom(1, { lock: true });
+  else if   (e.code === 'Digit3') selectRoom(2, { lock: true });
+  else if   (e.code === 'Digit4') selectRoom(3, { lock: true });
+  else if   (e.code === 'Digit5') selectRoom(4, { lock: true });
 });
 
-// Mouse wheel = step through
+// Mouse wheel = step through (also locks)
 window.addEventListener('wheel', e => {
-  e.preventDefault();
   if (morphing) return;
+  e.preventDefault();
   const dir = Math.sign(e.deltaY);
   const next = currentIdx < 0 ? 0 : Math.max(0, Math.min(ROOMS.length - 1, currentIdx + dir));
-  selectRoom(next);
+  selectRoom(next, { lock: true });
 }, { passive: false });
 
-// Click on canvas = confirm if something selected
+// Click on canvas = confirm if user has locked in a shape
 canvas.addEventListener('click', () => {
-  if (targetIdx >= 0 && !morphing) {
+  if (mode === 'locked' && targetIdx >= 0 && !morphing) {
     window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
   }
 });
@@ -758,14 +863,181 @@ function animate() {
       morphing = false;
       currentIdx = targetIdx;
       uniforms.uProgress.value = 0;
-      // when settled into a shape, dim idle factor; when back to nebula, raise it
-      uniforms.uIdle.value = currentIdx < 0 ? 1.0 : 0.15;
+      // When settled into a shape, suppress idle drift (shape stays readable).
+      // When sitting in raw nebula, allow full drift.
+      uniforms.uIdle.value = currentIdx < 0 ? 1.0 : 0.08;
+      // Auto mode: schedule the next advance now that this morph is done.
+      if (mode === 'auto' && currentIdx >= 0) {
+        autoHoldEnd = elapsed + AUTO_HOLD;
+      }
     }
   }
+
+  // Drive auto-cycle (no-op if mode === 'locked')
+  autoTick(elapsed);
+
   composer.render();
   requestAnimationFrame(animate);
 }
 animate();
+
+// ─── Expose hooks for the gesture module ──────────────────────
+window._hub = {
+  selectRoom,
+  backToAuto,
+  cycle: (dir) => {
+    const baseIdx = currentIdx < 0 ? 0 : currentIdx;
+    const next = (baseIdx + dir + ROOMS.length) % ROOMS.length;
+    if (!morphing) selectRoom(next, { lock: true });
+  },
+  setZoom: (z) => {                    // z ∈ [0.6, 1.6]
+    const target = Math.max(0.6, Math.min(1.6, z));
+    // smooth camera distance
+    camera.position.z = 4 + (1.6 - target) * 4;   // closer when zoomed in
+  },
+  enter: () => {
+    if (mode === 'locked' && targetIdx >= 0 && !morphing) {
+      window.open(ROOMS[targetIdx].url, '_blank', 'noopener');
+    } else if (currentIdx >= 0 && !morphing) {
+      window.open(ROOMS[currentIdx].url, '_blank', 'noopener');
+    }
+  },
+  getCurrentIdx: () => (mode === 'locked' ? targetIdx : currentIdx),
+  ROOMS,
+};
+</script>
+
+<!-- ─── Gesture controller (MediaPipe Hands) ────────────────────── -->
+<script>
+(function setupGesture() {
+  const toggle = document.getElementById('gestureToggle');
+  const video  = document.getElementById('gesture-video');
+  const hud    = document.getElementById('gestureHud');
+  let active = false;
+  let hands = null;
+  let camera = null;
+  let stream = null;
+
+  // Hand state across frames
+  let lastSwipeX = null;       // last detected wrist X (in normalized [0..1])
+  let lastSwipeT = 0;
+  let swipeArmed = true;       // de-bounce swipes
+  let lastPinch = null;
+  let okStreak = 0;            // OK gesture must hold for N frames
+  const OK_HOLD_FRAMES = 14;
+
+  toggle.addEventListener('click', () => {
+    if (active) stop(); else start();
+  });
+
+  async function start() {
+    if (!window.Hands) {
+      alert('MediaPipe 还没加载完,等一秒再点。');
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+    } catch (e) {
+      alert('需要摄像头权限才能用手势模式');
+      return;
+    }
+    video.srcObject = stream;
+    video.classList.add('visible');
+    hud.classList.add('visible');
+    toggle.classList.add('active');
+    active = true;
+
+    hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    });
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6,
+    });
+    hands.onResults(onResults);
+
+    camera = new Camera(video, {
+      onFrame: async () => { if (active) await hands.send({ image: video }); },
+      width: 640, height: 480,
+    });
+    camera.start();
+  }
+
+  function stop() {
+    active = false;
+    toggle.classList.remove('active');
+    video.classList.remove('visible');
+    hud.classList.remove('visible');
+    if (camera) { camera.stop(); camera = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    if (hands)  { hands.close(); hands = null; }
+    lastSwipeX = null; lastPinch = null; okStreak = 0;
+    window._hub.setZoom(1.0);
+  }
+
+  function dist(a, b) {
+    const dx = a.x - b.x, dy = a.y - b.y;
+    return Math.hypot(dx, dy);
+  }
+
+  function isOK(lm) {
+    // Thumb tip (4) touches index tip (8); middle/ring/pinky tips are extended
+    // (further from wrist than their pip joints).
+    const d = dist(lm[4], lm[8]);
+    if (d > 0.06) return false;
+    const wrist = lm[0];
+    const extended = (tipIdx, pipIdx) =>
+      dist(lm[tipIdx], wrist) > dist(lm[pipIdx], wrist) * 1.05;
+    return extended(12, 10) && extended(16, 14) && extended(20, 18);
+  }
+
+  function onResults(res) {
+    if (!res.multiHandLandmarks || !res.multiHandLandmarks.length) {
+      okStreak = 0;
+      return;
+    }
+    const lm = res.multiHandLandmarks[0];
+
+    // ── 1. Pinch → zoom ────────────────────────────────────
+    const pinch = dist(lm[4], lm[8]);           // [0..~0.4]
+    // map pinch 0.02..0.35 → zoom 1.6..0.6 (tight = zoom IN, open = zoom OUT)
+    const z = 0.6 + (Math.min(0.35, Math.max(0.02, pinch)) - 0.02) / 0.33 * 1.0;
+    window._hub.setZoom(z);
+
+    // ── 2. Swipe → cycle ───────────────────────────────────
+    // Mirror X because video is mirrored.
+    const x = 1 - lm[0].x;
+    const now = performance.now();
+    if (lastSwipeX === null) lastSwipeX = x;
+    const dx = x - lastSwipeX;
+
+    // Only register a swipe when motion exceeds threshold and we're armed.
+    if (swipeArmed && Math.abs(dx) > 0.18 && now - lastSwipeT > 700) {
+      window._hub.cycle(dx > 0 ? 1 : -1);
+      lastSwipeT = now;
+      swipeArmed = false;
+      setTimeout(() => { swipeArmed = true; }, 750);
+      lastSwipeX = x;
+    } else if (Math.abs(x - lastSwipeX) > 0.08) {
+      // drift toward current x slowly when not swiping
+      lastSwipeX = x;
+    }
+
+    // ── 3. OK gesture → enter (must hold ~half a second) ──
+    if (isOK(lm)) {
+      okStreak++;
+      if (okStreak === OK_HOLD_FRAMES) {
+        window._hub.enter();
+        okStreak = -60; // cool-down
+      }
+    } else {
+      if (okStreak > 0) okStreak = 0;
+      else if (okStreak < 0) okStreak++;
+    }
+  }
+})();
 </script>
 
 </body>
