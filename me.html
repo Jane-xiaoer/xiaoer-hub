@@ -239,14 +239,14 @@ function buildGraph(root){
   const center={ id:'me', kind:'center', label:root.label||'小耳', en:root.en||'Xiaoer',
     sub:root.identity||root.sub||'', intro:root.hover||root.subtitle||'', introEn:root.hoverEn||HOVER_EN,
     about:root.about||null, action:root.action||'进一步认识小耳', url:'',
-    x:0,y:0,z:0, r:7 };
+    x:0,y:0,z:0, r:8 };
   NODES.push(center);
   const cats=(root.children||[]);
   cats.forEach((cat,ci)=>{
     const d=fib(ci, cats.length);
     const cx=d[0]*R1, cy=d[1]*R1, cz=d[2]*R1;
     const cnode={ id:'cat'+ci, kind:'cat', label:cat.label, en:cat.en||'', sub:cat.en||'', intro:'', url:'',
-      x:cx,y:cy,z:cz, r:3.2 };
+      x:cx,y:cy,z:cz, r:4 };
     NODES.push(cnode); LINKS.push([center,cnode]);
     const leaves=(cat.children||cat.nodes||[]);
     leaves.forEach((lf,li)=>{
@@ -260,12 +260,12 @@ function buildGraph(root){
       const lz=cz + (Math.cos(a)*t1[2]+Math.sin(a)*t2[2])*spread + d[2]*52;
       const lnode={ id:'l'+ci+'_'+li, kind:'leaf', label:lf.label, en:lf.en||'', sub:lf.en||'',
         intro:(lf.url||lf.href||''), url:lf.url||lf.href||'',
-        x:lx,y:ly,z:lz, r:1.8 };
+        x:lx,y:ly,z:lz, r:2.4 };
       NODES.push(lnode); LINKS.push([cnode,lnode]);
       // sub-hub: 奇物录 / 馆藏站 再展开一层
       const enr = ENRICH[lf.label];
       if(enr){
-        lnode.kind='subhub'; lnode.r=3; if(enr.current) lnode.current=true;
+        lnode.kind='subhub'; lnode.r=3.6; if(enr.current) lnode.current=true;
         const pd=norm([lx,ly,lz]);
         const pu=Math.abs(pd[1])>0.9?[1,0,0]:[0,1,0];
         const pt1=norm(cross(pd,pu)), pt2=norm(cross(pd,pt1));
@@ -274,7 +274,7 @@ function buildGraph(root){
           const sx=lx + (Math.cos(sa)*pt1[0]+Math.sin(sa)*pt2[0])*enr.r2 + pd[0]*20;
           const sy=ly + (Math.cos(sa)*pt1[1]+Math.sin(sa)*pt2[1])*enr.r2 + pd[1]*20;
           const sz=lz + (Math.cos(sa)*pt1[2]+Math.sin(sa)*pt2[2])*enr.r2 + pd[2]*20;
-          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:1.35 };
+          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:1.8 };
           NODES.push(snode); LINKS.push([lnode,snode]);
         });
       }
@@ -287,6 +287,8 @@ function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2
 // ── rotation + projection ──
 let yaw=0.3, pitch=-0.15, autoYaw=0;
 let zoom=1;
+let lineMode=1; // 0 微光渐变 · 1 虚线 · 2 无线 (按 L 循环对比)
+window.addEventListener('keydown',e=>{ if(e.key==='l'||e.key==='L'){ lineMode=(lineMode+1)%3; } });
 let dragging=false, lx=0, ly=0, moved=false;
 cv.addEventListener('mousedown',e=>{dragging=true;moved=false;lx=e.clientX;ly=e.clientY;document.documentElement.classList.add('dragging');});
 window.addEventListener('mouseup',()=>{dragging=false;document.documentElement.classList.remove('dragging');});
@@ -352,13 +354,28 @@ function frame(){
   if(!dragging) cv.style.cursor = hover ? 'pointer' : 'grab';
   // links (draw back-to-front by mid z)
   const order=LINKS.map((L,i)=>({i,z:(project(L[0]).z+project(L[1]).z)/2})).sort((a,b)=>a.z-b.z);
-  for(const {i} of order){
+  if(lineMode!==2) for(const {i} of order){
     const a=P[NODES.indexOf(LINKS[i][0])], b=P[NODES.indexOf(LINKS[i][1])];
     const active = hover && (LINKS[i][0]===hover||LINKS[i][1]===hover);
-    const alpha=(0.05+0.10*((a.persp+b.persp)/2))*(active?4.5:1);
-    ctx.strokeStyle = active?`rgba(255,124,58,${Math.min(0.7,alpha)})`:`rgba(200,190,200,${Math.min(0.22,alpha)})`;
-    ctx.lineWidth = active?1.2:0.6;
-    ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+    // 星空里连线本是眼睛脑补的 —— 两端在星点处淡出,只在中段留一缕微光,视觉上更短更含蓄
+    const mid=(a.persp+b.persp)/2;
+    const A = active ? Math.min(0.5, (0.05+0.09*mid)*6) : Math.min(0.1, 0.02+0.05*mid);
+    const col = active ? '255,124,58' : '188,184,200';
+    ctx.lineWidth = active?1.0:0.5;
+    if(lineMode===1){ // 虚线(faint dashed)
+      ctx.save(); ctx.setLineDash([2,6]);
+      ctx.strokeStyle=`rgba(${col},${Math.min(active?0.5:0.14, A+0.03)})`;
+      ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+      ctx.restore();
+    }else{ // 0: 微光渐变(两端淡出)
+      const grad = ctx.createLinearGradient(a.sx,a.sy,b.sx,b.sy);
+      grad.addColorStop(0,`rgba(${col},0)`);
+      grad.addColorStop(active?0.28:0.36,`rgba(${col},${A})`);
+      grad.addColorStop(active?0.72:0.64,`rgba(${col},${A})`);
+      grad.addColorStop(1,`rgba(${col},0)`);
+      ctx.strokeStyle=grad;
+      ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+    }
   }
   // nodes back-to-front
   const nodeOrder=NODES.map((n,i)=>({i,z:P[i].z})).sort((a,b)=>a.z-b.z);
@@ -369,12 +386,12 @@ function frame(){
     // 压缩透视对点半径的放大 —— 近处的点不再膨胀得过大
     const R=n.r*(0.62+0.38*p.persp)*zoom*(isHover?1.35:1);
     const coral = n.kind==='center' || isHover;
-    // glow —— 点核心保持小,但光晕放大以柔化/盖住连线(避免线条裸露)
-    const glowR = R*(n.kind==='center'?4:3.8);
+    // glow —— 光晕更大更饱满,让星点自身发光、压过连线(浩瀚星空感)
+    const glowR = R*(n.kind==='center'?4.6:4.4);
     const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
     const col = coral?'255,124,58':'235,230,240';
-    g.addColorStop(0,`rgba(${col},${(n.kind==='center'?0.55:0.5)*depth})`);
-    g.addColorStop(0.5,`rgba(${col},${(n.kind==='center'?0.16:0.14)*depth})`);
+    g.addColorStop(0,`rgba(${col},${(n.kind==='center'?0.62:0.58)*depth})`);
+    g.addColorStop(0.4,`rgba(${col},${(n.kind==='center'?0.22:0.2)*depth})`);
     g.addColorStop(1,`rgba(${col},0)`);
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,glowR,0,7); ctx.fill();
     // core
