@@ -374,7 +374,7 @@ function frame(){
     // 星空里连线本是眼睛脑补的 —— 两端在星点处淡出,只在中段留一缕微光,视觉上更短更含蓄
     const mid=(a.persp+b.persp)/2;
     const A = active ? Math.min(0.7, (0.06+0.1*mid)*6) : Math.min(0.28, 0.1+0.13*mid);
-    const col = active ? HL_PALETTES[hlKey].join(',') : '255,124,58'; // 静止=珊瑚红,hover=蓝高亮
+    const col = active ? HL_PALETTES[hlKey].join(',') : '196,194,206'; // 静止=灰线,hover=蓝高亮
     ctx.lineWidth = active?1.15:0.7;
     if(lineMode===1){ // 虚线(faint dashed)
       ctx.save(); ctx.setLineDash([2,6]);
