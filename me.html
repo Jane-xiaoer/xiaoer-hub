@@ -292,7 +292,7 @@ function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2
 // ── rotation + projection ──
 let yaw=0.3, pitch=-0.15, autoYaw=0;
 let zoom=1;
-let lineMode=1; // 0 微光渐变 · 1 虚线 · 2 无线 (按 L 循环对比)
+let lineMode=0; // 0 常态连续细线 · 1 虚线 · 2 无线 (按 L 循环对比)
 // 悬停高亮色 —— 蓝(珊瑚橙互补色,高级)/ 黄。按 K 切换对比
 const HL_PALETTES={ blue:[74,164,255], gold:[255,205,90] };
 let hlKey='blue';
@@ -373,20 +373,19 @@ function frame(){
     const active = hover && (LINKS[i][0]===hover||LINKS[i][1]===hover);
     // 星空里连线本是眼睛脑补的 —— 两端在星点处淡出,只在中段留一缕微光,视觉上更短更含蓄
     const mid=(a.persp+b.persp)/2;
-    const A = active ? Math.min(0.6, (0.05+0.09*mid)*7) : Math.min(0.16, 0.045+0.075*mid);
+    const A = active ? Math.min(0.7, (0.06+0.1*mid)*6) : Math.min(0.28, 0.1+0.13*mid);
     const col = active ? HL_PALETTES[hlKey].join(',') : '255,124,58'; // 静止=珊瑚红,hover=蓝高亮
-    ctx.lineWidth = active?1.0:0.5;
+    ctx.lineWidth = active?1.15:0.7;
     if(lineMode===1){ // 虚线(faint dashed)
       ctx.save(); ctx.setLineDash([2,6]);
-      ctx.strokeStyle=`rgba(${col},${Math.min(active?0.55:0.2, A+0.03)})`;
+      ctx.strokeStyle=`rgba(${col},${A})`;
       ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
       ctx.restore();
-    }else{ // 0: 微光渐变(两端淡出)
+    }else{ // 0: 常态连续细线(连到星点,两端略淡,中段清晰)
       const grad = ctx.createLinearGradient(a.sx,a.sy,b.sx,b.sy);
-      grad.addColorStop(0,`rgba(${col},0)`);
-      grad.addColorStop(active?0.28:0.36,`rgba(${col},${A})`);
-      grad.addColorStop(active?0.72:0.64,`rgba(${col},${A})`);
-      grad.addColorStop(1,`rgba(${col},0)`);
+      grad.addColorStop(0,`rgba(${col},${A*0.55})`);
+      grad.addColorStop(0.5,`rgba(${col},${A})`);
+      grad.addColorStop(1,`rgba(${col},${A*0.55})`);
       ctx.strokeStyle=grad;
       ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
     }
