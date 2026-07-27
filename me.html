@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>关于小耳 · 星座图</title>
+<meta name="description" content="关于小耳 — 一张可旋转的星座图，我的作品 / 馆藏 / 社媒 / 联系都在其中。"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Cutive+Mono&family=Noto+Serif+SC:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--accent:#ff7c3a;--accent-soft:rgba(255,124,58,.5);--dim:rgba(255,255,255,.5)}
+  html,body{height:100%;overflow:hidden;background:#000;color:#fff;font-family:"Cutive Mono",monospace;user-select:none;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 48%,rgba(60,30,15,.35),transparent 70%),#060306;z-index:0;pointer-events:none}
+  #c{position:fixed;inset:0;z-index:1;cursor:grab;display:block}
+  html.dragging #c{cursor:grabbing}
+  /* top-left mark */
+  .mark{position:fixed;top:26px;left:34px;z-index:10;pointer-events:none}
+  .mark .zh{font-family:"Noto Serif SC",serif;font-weight:500;font-size:26px;letter-spacing:.18em;color:#fff}
+  .mark .en{font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.42em;color:var(--dim);text-transform:uppercase;margin-top:8px}
+  /* back link (top-right, keeps the hub's meta style) */
+  .back{position:fixed;top:28px;right:34px;z-index:10;font-family:"Cutive Mono",monospace;font-size:11px;letter-spacing:.3em;
+    color:rgba(255,255,255,.55);text-transform:uppercase;text-decoration:none;padding:8px 16px;border:1px solid rgba(255,255,255,.16);
+    border-radius:100px;background:rgba(20,12,8,.35);backdrop-filter:blur(6px);transition:color .3s,border-color .3s}
+  .back:hover{color:var(--accent);border-color:var(--accent-soft)}
+  /* hint bottom-right */
+  .side-hint{position:fixed;right:32px;bottom:30px;z-index:10;font-size:9px;letter-spacing:.25em;color:rgba(255,255,255,.38);
+    text-transform:uppercase;pointer-events:none;text-align:right;line-height:2}
+  .side-hint .key{border:1px solid rgba(255,255,255,.18);padding:2px 6px;margin:0 3px;color:rgba(255,255,255,.6);border-radius:2px}
+  /* status label bottom-left (tol.is-flavored) */
+  .hud{position:fixed;left:34px;bottom:30px;z-index:10;font-size:10px;letter-spacing:.3em;color:rgba(255,255,255,.4);
+    text-transform:uppercase;pointer-events:none}
+  .hud b{color:var(--accent);font-weight:400}
+  @media(max-width:700px){.mark .zh{font-size:20px}.side-hint{display:none}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="mark"><div class="zh">关于小耳</div><div class="en">Xiaoer&nbsp;·&nbsp;World Constellation</div></div>
+<a class="back" href="https://xiaoercamera.xyz/">← 回馆藏</a>
+<div class="hud">SPHERICAL PROJECTION · <b id="hudCount">—</b> NODES</div>
+<div class="side-hint">
+  <div><span class="key">DRAG</span> rotate</div>
+  <div><span class="key">SCROLL</span> zoom</div>
+  <div><span class="key">HOVER</span> reveal</div>
+  <div><span class="key">CLICK</span> open</div>
+</div>
+
+<script>
+// ── data: Notion 自媒体网络总表(经 tools.xiaoerai.xyz/api/me-network),写死兜底 ──
+const API = 'https://tools.xiaoerai.xyz/api/me-network';
+const FALLBACK = {
+  id:'me', type:'center', label:'小耳', en:'Xiaoer',
+  identity:'AI Artist × AI Builder × Creative Technologist',
+  subtitle:'以艺术家的审美，构建有质感的 AI 产品、开源工具与个人智能系统。',
+  aboutHref:'https://xiaoerai.xyz/me',
+  children:[
+    {label:'网站作品',en:'Works',type:'cat',children:[
+      {label:'奇物录',en:"Xiaoer's Desk",url:'https://xiaoerai.xyz'},
+      {label:'馆藏站',en:'Collections',url:'https://xiaoercamera.xyz'},
+      {label:'艺术站',en:'Art Studio',url:'https://xiaoer-art.com'},
+      {label:'Omia',en:'Omia',url:'https://xiaoeromia.com'},
+    ]},
+    {label:'馆藏',en:'Halls',type:'cat',children:[
+      {label:'相机馆',en:'Camera',url:'https://camera.xiaoercamera.xyz'},
+      {label:'音乐馆',en:'Music',url:'https://fm.xiaoercamera.xyz'},
+      {label:'城市馆',en:'City',url:'https://city.xiaoercamera.xyz'},
+      {label:'居家馆',en:'Home',url:'https://home.xiaoercamera.xyz'},
+      {label:'肖像馆',en:'Portrait',url:'https://portrait.xiaoercamera.xyz'},
+      {label:'跳舞馆',en:'Dance',url:'https://dance.xiaoercamera.xyz'},
+      {label:'弹珠馆',en:'Marbles',url:'https://marbles.xiaoercamera.xyz'},
+    ]},
+    {label:'社交账号',en:'Social',type:'cat',children:[
+      {label:'X · Twitter',en:'X',url:'https://x.com/xiaoerzhan'},
+      {label:'小红书',en:'RED',url:'https://www.xiaohongshu.com/user/profile/56f0a8951c07df433dc499a8'},
+      {label:'Instagram',en:'Instagram',url:'https://www.instagram.com/xiaoerzhan/'},
+    ]},
+    {label:'内容平台',en:'Content',type:'cat',children:[
+      {label:'微信公众号',en:'WeChat Official',url:'https://mp.weixin.qq.com/s/Bq490vgphMpj-luB1h87gw'},
+      {label:'B站',en:'Bilibili',url:'https://space.bilibili.com/18947646'},
+      {label:'视频号',en:'WeChat Channels',url:''},
+    ]},
+    {label:'开源',en:'Open Source',type:'cat',children:[
+      {label:'GitHub',en:'GitHub',url:'https://github.com/Jane-xiaoer'},
+    ]},
+    {label:'联系方式',en:'Contact',type:'cat',children:[
+      {label:'微信',en:'WeChat',url:''},
+      {label:'邮箱',en:'Email',url:'mailto:xiaoerzhan@gmail.com'},
+    ]},
+  ],
+};
+
+// 奇物录 / 馆藏站 是"子枢纽"——各自再展开一层分支。馆藏站标为"你在这里"(本页就在此站内)
+const ENRICH = {
+  '奇物录': { r2:46, subs:[
+    {label:'弹药库',en:'Arsenal',url:'https://tools.xiaoerai.xyz'},
+    {label:'走马灯',en:'Zoetrope',url:'https://video.xiaoerai.xyz'},
+    {label:'百物匣',en:'Curio Box',url:'https://store.xiaoerai.xyz'},
+    {label:'鲁班箱',en:'Workbox',url:'https://workbox.xiaoerai.xyz'},
+  ]},
+  '馆藏站': { r2:56, current:true, subs:[
+    {label:'相机馆',en:'Camera',url:'https://camera.xiaoercamera.xyz'},
+    {label:'音乐馆',en:'Music',url:'https://fm.xiaoercamera.xyz'},
+    {label:'城市馆',en:'City',url:'https://city.xiaoercamera.xyz'},
+    {label:'居家馆',en:'Home',url:'https://home.xiaoercamera.xyz'},
+    {label:'肖像馆',en:'Portrait',url:'https://portrait.xiaoercamera.xyz'},
+    {label:'跳舞馆',en:'Dance',url:'https://dance.xiaoercamera.xyz'},
+    {label:'弹珠馆',en:'Marbles',url:'https://marbles.xiaoercamera.xyz'},
+  ]},
+};
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W*DPR; cv.height = H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize); resize();
+
+// ── build nodes with 3D positions (center + categories on a sphere + leaves near cat) ──
+let NODES = [], LINKS = [];
+
+// ── deep background starfield (3D, rotates with the scene → 浩瀚星空) ──
+const BGSTARS = (function(){
+  const a=[];
+  for(let i=0;i<820;i++){
+    const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+    const R=520+Math.random()*1450;
+    a.push({ x:R*Math.sin(ph)*Math.cos(th), y:R*Math.cos(ph), z:R*Math.sin(ph)*Math.sin(th),
+      b:0.22+Math.random()*0.78, tw:Math.random()*6.283, sz:Math.random()<0.13?2.0:1.05,
+      warm:Math.random()<0.16 });
+  }
+  return a;
+})();
+function fib(i, n){ // fibonacci sphere direction
+  const phi = Math.acos(1 - 2*(i+0.5)/n);
+  const th  = Math.PI*(1+Math.sqrt(5))*(i+0.5);
+  return [Math.sin(phi)*Math.cos(th), Math.cos(phi)*0.72, Math.sin(phi)*Math.sin(th)];
+}
+function buildGraph(root){
+  NODES=[]; LINKS=[];
+  const R1=245, R2=98;
+  const center={ id:'me', kind:'center', label:root.label||'小耳', en:root.en||'Xiaoer',
+    sub:root.identity||root.sub||'', intro:root.subtitle||root.hover||'', url:root.aboutHref||root.about||'',
+    x:0,y:0,z:0, r:11 };
+  NODES.push(center);
+  const cats=(root.children||[]);
+  cats.forEach((cat,ci)=>{
+    const d=fib(ci, cats.length);
+    const cx=d[0]*R1, cy=d[1]*R1, cz=d[2]*R1;
+    const cnode={ id:'cat'+ci, kind:'cat', label:cat.label, en:cat.en||'', sub:cat.en||'', intro:'', url:'',
+      x:cx,y:cy,z:cz, r:6 };
+    NODES.push(cnode); LINKS.push([center,cnode]);
+    const leaves=(cat.children||cat.nodes||[]);
+    leaves.forEach((lf,li)=>{
+      // spread leaves around the category direction, on a small local ring tilted outward
+      const a=(li/Math.max(1,leaves.length))*Math.PI*2 + ci*1.3;
+      const up=Math.abs(d[1])>0.9?[1,0,0]:[0,1,0];
+      const t1=norm(cross(d,up)), t2=norm(cross(d,t1));
+      const spread=R2*(0.8+0.5*Math.random());
+      const lx=cx + (Math.cos(a)*t1[0]+Math.sin(a)*t2[0])*spread + d[0]*52;
+      const ly=cy + (Math.cos(a)*t1[1]+Math.sin(a)*t2[1])*spread + d[1]*52;
+      const lz=cz + (Math.cos(a)*t1[2]+Math.sin(a)*t2[2])*spread + d[2]*52;
+      const lnode={ id:'l'+ci+'_'+li, kind:'leaf', label:lf.label, en:lf.en||'', sub:lf.en||'',
+        intro:(lf.url||lf.href||''), url:lf.url||lf.href||'',
+        x:lx,y:ly,z:lz, r:3.4 };
+      NODES.push(lnode); LINKS.push([cnode,lnode]);
+      // sub-hub: 奇物录 / 馆藏站 再展开一层
+      const enr = ENRICH[lf.label];
+      if(enr){
+        lnode.kind='subhub'; lnode.r=5.2; if(enr.current) lnode.current=true;
+        const pd=norm([lx,ly,lz]);
+        const pu=Math.abs(pd[1])>0.9?[1,0,0]:[0,1,0];
+        const pt1=norm(cross(pd,pu)), pt2=norm(cross(pd,pt1));
+        enr.subs.forEach((sb,si)=>{
+          const sa=(si/enr.subs.length)*Math.PI*2 + li;
+          const sx=lx + (Math.cos(sa)*pt1[0]+Math.sin(sa)*pt2[0])*enr.r2 + pd[0]*20;
+          const sy=ly + (Math.cos(sa)*pt1[1]+Math.sin(sa)*pt2[1])*enr.r2 + pd[1]*20;
+          const sz=lz + (Math.cos(sa)*pt1[2]+Math.sin(sa)*pt2[2])*enr.r2 + pd[2]*20;
+          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:2.6 };
+          NODES.push(snode); LINKS.push([lnode,snode]);
+        });
+      }
+    });
+  });
+}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];}
+function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
+
+// ── rotation + projection ──
+let yaw=0.3, pitch=-0.15, autoYaw=0;
+let zoom=1;
+let dragging=false, lx=0, ly=0, moved=false;
+cv.addEventListener('mousedown',e=>{dragging=true;moved=false;lx=e.clientX;ly=e.clientY;document.documentElement.classList.add('dragging');});
+window.addEventListener('mouseup',()=>{dragging=false;document.documentElement.classList.remove('dragging');});
+window.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  if(!dragging)return;
+  const dx=e.clientX-lx, dy=e.clientY-ly;
+  if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
+  yaw+=dx*0.006; pitch=Math.max(-1.2,Math.min(1.2,pitch+dy*0.005));
+  lx=e.clientX;ly=e.clientY;
+});
+window.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.55,Math.min(2.4,zoom*(e.deltaY>0?0.92:1.08)));},{passive:false});
+let mx=W/2,my=H/2;
+
+function project(n){
+  // rotate by yaw (around Y) then pitch (around X)
+  const cy=Math.cos(yaw+autoYaw),sy=Math.sin(yaw+autoYaw);
+  let x=n.x*cy - n.z*sy, z=n.x*sy + n.z*cy, y=n.y;
+  const cp=Math.cos(pitch),sp=Math.sin(pitch);
+  let y2=y*cp - z*sp, z2=y*sp + z*cp;
+  const persp=420/(420 + z2); // perspective
+  const s=persp*zoom;
+  return { sx:W/2 + x*s, sy:H/2 + y2*s, z:z2, scale:s, persp };
+}
+
+// ── interaction: hover nearest projected node ──
+let hover=null;
+cv.addEventListener('click',()=>{
+  if(moved)return;
+  if(hover && hover.url) window.open(hover.url,'_blank','noopener');
+  else if(hover && hover.kind==='center'){ const c=NODES[0]; if(c.url) window.open(c.url,'_blank','noopener'); }
+});
+
+// ── render loop ──
+function frame(){
+  autoYaw += dragging?0:0.00045;
+  ctx.clearRect(0,0,W,H);
+  // deep background starfield (behind everything)
+  const now=performance.now()*0.001;
+  for(const s of BGSTARS){
+    const p=project(s);
+    if(p.persp<=0.04) continue;
+    const tw=0.6+0.4*Math.sin(now*1.2+s.tw);
+    const al=s.b*tw*Math.min(1,p.persp*1.3);
+    if(al<0.02) continue;
+    ctx.fillStyle=s.warm?`rgba(255,205,170,${al})`:`rgba(240,244,255,${al})`;
+    ctx.beginPath(); ctx.arc(p.sx,p.sy,Math.max(0.4,s.sz*p.persp),0,7); ctx.fill();
+  }
+  // compute projections
+  const P = NODES.map(project);
+  // hover pick (nearest within radius)
+  hover=null; let best=1e9;
+  for(let i=0;i<NODES.length;i++){
+    const p=P[i]; const dd=Math.hypot(p.sx-mx,p.sy-my);
+    const hitR = Math.max(14, NODES[i].r*p.scale+10);
+    if(dd<hitR && dd<best){best=dd;hover=NODES[i];hover._p=p;}
+  }
+  // links (draw back-to-front by mid z)
+  const order=LINKS.map((L,i)=>({i,z:(project(L[0]).z+project(L[1]).z)/2})).sort((a,b)=>a.z-b.z);
+  for(const {i} of order){
+    const a=P[NODES.indexOf(LINKS[i][0])], b=P[NODES.indexOf(LINKS[i][1])];
+    const active = hover && (LINKS[i][0]===hover||LINKS[i][1]===hover);
+    const alpha=(0.05+0.10*((a.persp+b.persp)/2))*(active?4.5:1);
+    ctx.strokeStyle = active?`rgba(255,124,58,${Math.min(0.7,alpha)})`:`rgba(200,190,200,${Math.min(0.22,alpha)})`;
+    ctx.lineWidth = active?1.2:0.6;
+    ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+  }
+  // nodes back-to-front
+  const nodeOrder=NODES.map((n,i)=>({i,z:P[i].z})).sort((a,b)=>a.z-b.z);
+  for(const {i} of nodeOrder){
+    const n=NODES[i], p=P[i];
+    const depth=Math.max(0.25,p.persp);
+    const isHover = hover===n;
+    const R=n.r*p.scale*(isHover?1.35:1);
+    const coral = n.kind==='center' || isHover;
+    // glow
+    const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,R*4);
+    const col = coral?'255,124,58':'235,230,240';
+    g.addColorStop(0,`rgba(${col},${0.5*depth})`); g.addColorStop(1,`rgba(${col},0)`);
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,R*4,0,7); ctx.fill();
+    // core
+    ctx.fillStyle = coral?`rgba(255,150,90,${0.95*depth})`:`rgba(255,255,255,${0.85*depth})`;
+    ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,7); ctx.fill();
+    // ring for center + hover (tol.is crosshair vibe)
+    if(n.kind==='center'||isHover){
+      ctx.strokeStyle=`rgba(255,124,58,${0.5*depth})`; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(p.sx,p.sy,R+7,0,7); ctx.stroke();
+      if(isHover){ // crosshair
+        ctx.strokeStyle='rgba(255,124,58,.4)';ctx.lineWidth=.7;
+        ctx.beginPath();ctx.moveTo(p.sx-R-14,p.sy);ctx.lineTo(p.sx+R+14,p.sy);
+        ctx.moveTo(p.sx,p.sy-R-14);ctx.lineTo(p.sx,p.sy+R+14);ctx.stroke();
+      }
+    }
+    if(n.current && !isHover){ // 低调的"当前站点"标记 —— 明显区别于中心的小耳(不用珊瑚色/不发大光)
+      ctx.save(); ctx.setLineDash([2,3]);
+      ctx.strokeStyle=`rgba(230,230,240,${0.32*depth})`; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.arc(p.sx,p.sy,R+9,0,7); ctx.stroke();
+      ctx.restore();
+      ctx.textAlign='center'; ctx.font='8px "Cutive Mono",monospace';
+      ctx.fillStyle=`rgba(215,215,228,${0.42*depth})`;
+      ctx.fillText('· 你在这里 ·', p.sx, p.sy + R + 15);
+      ctx.textAlign='left';
+    }
+    // labels: center always; cats always; leaves when hover or near-front
+    const showLabel = n.kind==='center'||n.kind==='cat'||n.kind==='subhub'||n.current || isHover
+      || (n.kind==='leaf'&&p.persp>0.82) || (n.kind==='sub'&&(isHover||p.persp>0.92));
+    if(showLabel){
+      const fs = n.kind==='center'?18:(n.kind==='cat'?13:(n.kind==='subhub'?12:(n.kind==='sub'?10:11)));
+      const la = n.kind==='center'?1:(isHover?1:0.5*depth+0.2);
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      const ox=R+10;
+      // zh
+      ctx.font=`${n.kind==='leaf'?'':'500 '}${fs}px "Noto Serif SC","Cutive Mono",monospace`;
+      ctx.fillStyle= coral?`rgba(255,150,90,${la})`:`rgba(255,255,255,${la})`;
+      ctx.fillText(n.label, p.sx+ox, p.sy - (n.en?5:0));
+      // en / sub
+      if(n.en){
+        ctx.font=`${Math.max(8,fs*0.62)}px "Cutive Mono",monospace`;
+        ctx.fillStyle=`rgba(255,255,255,${0.35*la+0.1})`;
+        ctx.fillText(n.en.toUpperCase(), p.sx+ox, p.sy + fs*0.62);
+      }
+    }
+  }
+  // center intro (bottom center) when hovering center or idle
+  requestAnimationFrame(frame);
+}
+
+// ── boot: fetch Notion, fallback ──
+(async function(){
+  let data=FALLBACK;
+  try{
+    const r=await fetch(API,{cache:'no-store'});
+    if(r.ok){ const j=await r.json(); if(j && (j.children||j.nodes)) data=j; }
+  }catch(e){}
+  buildGraph(data);
+  document.getElementById('hudCount').textContent=NODES.length;
+  frame();
+})();
+</script>
+</body>
+</html>
