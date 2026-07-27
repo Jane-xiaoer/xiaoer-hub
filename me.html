@@ -345,11 +345,13 @@ function frame(){
     // 压缩透视对点半径的放大 —— 近处的点不再膨胀得过大
     const R=n.r*(0.62+0.38*p.persp)*zoom*(isHover?1.35:1);
     const coral = n.kind==='center' || isHover;
-    // glow(中心保留大光晕,其余收敛)
-    const glowR = R*(n.kind==='center'?3.2:2.4);
+    // glow —— 点核心保持小,但光晕放大以柔化/盖住连线(避免线条裸露)
+    const glowR = R*(n.kind==='center'?4:3.8);
     const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
     const col = coral?'255,124,58':'235,230,240';
-    g.addColorStop(0,`rgba(${col},${(n.kind==='center'?0.5:0.42)*depth})`); g.addColorStop(1,`rgba(${col},0)`);
+    g.addColorStop(0,`rgba(${col},${(n.kind==='center'?0.55:0.5)*depth})`);
+    g.addColorStop(0.5,`rgba(${col},${(n.kind==='center'?0.16:0.14)*depth})`);
+    g.addColorStop(1,`rgba(${col},0)`);
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,glowR,0,7); ctx.fill();
     // core
     ctx.fillStyle = coral?`rgba(255,150,90,${0.95*depth})`:`rgba(255,255,255,${0.85*depth})`;
