@@ -215,14 +215,14 @@ function buildGraph(root){
   const center={ id:'me', kind:'center', label:root.label||'小耳', en:root.en||'Xiaoer',
     sub:root.identity||root.sub||'', intro:root.hover||root.subtitle||'',
     about:root.about||null, action:root.action||'进一步认识小耳', url:'',
-    x:0,y:0,z:0, r:8 };
+    x:0,y:0,z:0, r:7 };
   NODES.push(center);
   const cats=(root.children||[]);
   cats.forEach((cat,ci)=>{
     const d=fib(ci, cats.length);
     const cx=d[0]*R1, cy=d[1]*R1, cz=d[2]*R1;
     const cnode={ id:'cat'+ci, kind:'cat', label:cat.label, en:cat.en||'', sub:cat.en||'', intro:'', url:'',
-      x:cx,y:cy,z:cz, r:4.5 };
+      x:cx,y:cy,z:cz, r:3.2 };
     NODES.push(cnode); LINKS.push([center,cnode]);
     const leaves=(cat.children||cat.nodes||[]);
     leaves.forEach((lf,li)=>{
@@ -236,12 +236,12 @@ function buildGraph(root){
       const lz=cz + (Math.cos(a)*t1[2]+Math.sin(a)*t2[2])*spread + d[2]*52;
       const lnode={ id:'l'+ci+'_'+li, kind:'leaf', label:lf.label, en:lf.en||'', sub:lf.en||'',
         intro:(lf.url||lf.href||''), url:lf.url||lf.href||'',
-        x:lx,y:ly,z:lz, r:2.6 };
+        x:lx,y:ly,z:lz, r:1.8 };
       NODES.push(lnode); LINKS.push([cnode,lnode]);
       // sub-hub: 奇物录 / 馆藏站 再展开一层
       const enr = ENRICH[lf.label];
       if(enr){
-        lnode.kind='subhub'; lnode.r=4; if(enr.current) lnode.current=true;
+        lnode.kind='subhub'; lnode.r=3; if(enr.current) lnode.current=true;
         const pd=norm([lx,ly,lz]);
         const pu=Math.abs(pd[1])>0.9?[1,0,0]:[0,1,0];
         const pt1=norm(cross(pd,pu)), pt2=norm(cross(pd,pt1));
@@ -250,7 +250,7 @@ function buildGraph(root){
           const sx=lx + (Math.cos(sa)*pt1[0]+Math.sin(sa)*pt2[0])*enr.r2 + pd[0]*20;
           const sy=ly + (Math.cos(sa)*pt1[1]+Math.sin(sa)*pt2[1])*enr.r2 + pd[1]*20;
           const sz=lz + (Math.cos(sa)*pt1[2]+Math.sin(sa)*pt2[2])*enr.r2 + pd[2]*20;
-          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:1.9 };
+          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:1.35 };
           NODES.push(snode); LINKS.push([lnode,snode]);
         });
       }
@@ -274,7 +274,11 @@ window.addEventListener('mousemove',e=>{
   yaw+=dx*0.006; pitch=Math.max(-1.2,Math.min(1.2,pitch+dy*0.005));
   lx=e.clientX;ly=e.clientY;
 });
-window.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.55,Math.min(2.4,zoom*(e.deltaY>0?0.92:1.08)));},{passive:false});
+window.addEventListener('wheel',e=>{
+  if(aboutOverlay.classList.contains('show')) return; // 浮层打开时让它正常下拉滚动
+  e.preventDefault();
+  zoom=Math.max(.55,Math.min(2.4,zoom*(e.deltaY>0?0.92:1.08)));
+},{passive:false});
 let mx=W/2,my=H/2;
 
 function project(n){
@@ -338,13 +342,15 @@ function frame(){
     const n=NODES[i], p=P[i];
     const depth=Math.max(0.25,p.persp);
     const isHover = hover===n;
-    const R=n.r*p.scale*(isHover?1.35:1);
+    // 压缩透视对点半径的放大 —— 近处的点不再膨胀得过大
+    const R=n.r*(0.62+0.38*p.persp)*zoom*(isHover?1.35:1);
     const coral = n.kind==='center' || isHover;
-    // glow
-    const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,R*3.3);
+    // glow(中心保留大光晕,其余收敛)
+    const glowR = R*(n.kind==='center'?3.2:2.4);
+    const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
     const col = coral?'255,124,58':'235,230,240';
-    g.addColorStop(0,`rgba(${col},${0.5*depth})`); g.addColorStop(1,`rgba(${col},0)`);
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,R*3.3,0,7); ctx.fill();
+    g.addColorStop(0,`rgba(${col},${(n.kind==='center'?0.5:0.42)*depth})`); g.addColorStop(1,`rgba(${col},0)`);
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,glowR,0,7); ctx.fill();
     // core
     ctx.fillStyle = coral?`rgba(255,150,90,${0.95*depth})`:`rgba(255,255,255,${0.85*depth})`;
     ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,7); ctx.fill();
@@ -371,9 +377,25 @@ function frame(){
     // labels: center always; cats always; leaves when hover or near-front
     const showLabel = n.kind==='center'||n.kind==='cat'||n.kind==='subhub'||n.current || isHover
       || (n.kind==='leaf'&&p.persp>0.82) || (n.kind==='sub'&&(isHover||p.persp>0.92));
-    if(showLabel){
-      const fs = n.kind==='center'?18:(n.kind==='cat'?13:(n.kind==='subhub'?12:(n.kind==='sub'?10:11)));
-      const la = n.kind==='center'?1:(isHover?1:0.5*depth+0.2);
+    if(n.kind==='center'){
+      // 中心小耳：小耳 / XIAOER / 三个身份 叠成一栈
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      const ox=R+12;
+      ctx.font=`500 18px "Noto Serif SC","Cutive Mono",monospace`;
+      ctx.fillStyle='rgba(255,150,90,1)';
+      ctx.fillText(n.label, p.sx+ox, p.sy-24);
+      ctx.font='10px "Cutive Mono",monospace';
+      ctx.fillStyle='rgba(255,255,255,.45)';
+      ctx.fillText((n.en||'').toUpperCase(), p.sx+ox, p.sy-8);
+      const roles=(n.sub||'').split(/[×·・]/).map(s=>s.trim()).filter(Boolean).slice(0,3);
+      ctx.font='9px "Cutive Mono",monospace';
+      roles.forEach((rl,ri)=>{
+        ctx.fillStyle='rgba(255,150,90,.6)';
+        ctx.fillText(rl, p.sx+ox, p.sy+9+ri*13);
+      });
+    }else if(showLabel){
+      const fs = (n.kind==='cat'?13:(n.kind==='subhub'?12:(n.kind==='sub'?10:11)));
+      const la = (isHover?1:0.5*depth+0.2);
       ctx.textAlign='left'; ctx.textBaseline='middle';
       const ox=R+10;
       // zh
