@@ -19,8 +19,8 @@
   .mark .zh{font-family:"Noto Serif SC",serif;font-weight:500;font-size:26px;letter-spacing:.18em;color:#fff}
   .mark .en{font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.42em;color:var(--dim);text-transform:uppercase;margin-top:8px}
   /* back link (top-right, keeps the hub's meta style) */
-  .back{position:fixed;top:28px;right:34px;z-index:10;font-family:"Cutive Mono",monospace;font-size:11px;letter-spacing:.3em;
-    color:rgba(255,255,255,.55);text-transform:uppercase;text-decoration:none;padding:8px 16px;border:1px solid rgba(255,255,255,.16);
+  .back{position:fixed;top:28px;right:34px;z-index:10;font-family:"Cutive Mono",monospace;font-size:11px;letter-spacing:.24em;
+    color:rgba(255,255,255,.55);text-decoration:none;padding:8px 16px;border:1px solid rgba(255,255,255,.16);
     border-radius:100px;background:rgba(20,12,8,.35);backdrop-filter:blur(6px);transition:color .3s,border-color .3s}
   .back:hover{color:var(--accent);border-color:var(--accent-soft)}
   /* hint bottom-right */
@@ -38,6 +38,7 @@
   .infocard .t{font-family:"Noto Serif SC",serif;font-weight:500;font-size:18px;color:#fff;letter-spacing:.06em}
   .infocard .t .en{font-family:"Cutive Mono",monospace;font-size:9px;letter-spacing:.28em;color:var(--dim);margin-left:8px}
   .infocard .d{font-size:12px;line-height:1.85;color:rgba(255,255,255,.6);margin-top:9px}
+  .infocard .d.en{font-family:"Cormorant Garamond",serif;font-size:14px;line-height:1.55;color:rgba(255,255,255,.42);margin-top:7px}
   .infocard .go{font-size:9px;letter-spacing:.28em;color:var(--accent);margin-top:9px;text-transform:uppercase}
   /* 详细介绍浮层 */
   .about-overlay{position:fixed;inset:0;z-index:20;background:rgba(6,3,7,.975);backdrop-filter:blur(14px);
@@ -52,16 +53,18 @@
   .about-inner h1{font-family:"Noto Serif SC",serif;font-weight:500;font-size:46px;letter-spacing:.14em;color:#fff;margin:16px 0 8px}
   .about-inner .idw{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;color:var(--accent);letter-spacing:.03em}
   .about-inner .lead{font-family:"Noto Serif SC",serif;font-weight:300;font-size:17px;line-height:2;color:rgba(255,255,255,.82);margin:28px 0 4px}
+  .about-inner .lead-en{font-family:"Cormorant Garamond",serif;font-size:18px;line-height:1.8;color:rgba(255,255,255,.5);margin-top:12px}
   .about-sec{margin-top:32px;border-top:1px solid rgba(255,255,255,.09);padding-top:24px}
   .about-sec .k{font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.34em;color:var(--accent);text-transform:uppercase;margin-bottom:12px}
   .about-sec p{font-family:"Noto Serif SC",serif;font-weight:300;font-size:15px;line-height:2;color:rgba(255,255,255,.72)}
+  .about-sec p.en{font-family:"Cormorant Garamond",serif;font-size:17px;line-height:1.75;color:rgba(255,255,255,.46);margin-top:10px}
   .about-inner .foot{margin-top:40px;font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.3em;color:rgba(255,255,255,.35);text-transform:uppercase}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="mark"><div class="zh">关于小耳</div><div class="en">Xiaoer&nbsp;·&nbsp;World Constellation</div></div>
-<a class="back" href="https://xiaoercamera.xyz/">← 回馆藏</a>
+<a class="back" href="https://xiaoercamera.xyz/">← 回馆藏 · Collections</a>
 <div class="hud">SPHERICAL PROJECTION · <b id="hudCount">—</b> NODES</div>
 <div class="side-hint">
   <div><span class="key">DRAG</span> rotate</div>
@@ -142,6 +145,16 @@ const ENRICH = {
   ]},
 };
 
+// 英文层 —— 忠实翻译自 Notion 中文 bio。若 API 日后提供英文列(如 about.intro_en)则优先用之,否则用这里的内置英文。
+const HOVER_EN = 'Xiaoer is an AI Artist, AI Builder and Creative Technologist. With an artist’s eye she turns AI into products, open-source tools and personal intelligent systems with real craft. Click to get to know her.';
+const AB_EN = {
+  intro:'Xiaoer is an AI Artist, AI Builder and Creative Technologist. She fuses an artist’s sensibility, the systems thinking of large-scale projects and hands-on AI-agent practice to keep building products, open-source tools and personal intelligent systems with real craft. She doesn’t just use AI to generate content — she explores how AI should become a new kind of product, experience, system and way of working.',
+  story:'Xiaoer’s practice began in art, large-scale public-art projects and museum-building, then gradually moved into product, technology and AI systems. Her artistic training keeps her attentive to feeling, form and experience; years of complex projects gave her a system-level way of thinking from concept to delivery. After moving into AI, these two paths converged into a cross-disciplinary way of working: building products the way one creates art, while distilling the methods into reusable tools and systems.',
+  art:'As a generative artist she keeps pushing the edges of creation. Works such as Genesis Equation, Dance of the Equation, Camera Museum and Reimagined Herbals have been shown at the Today Art Museum AI mass exhibition, Rong Bao Zhai (Shenzhen) “Emergence: Bits & Poetry” AIGC exhibition, the 6th International Student Media Art Festival (ISMA), the Chongqing International Light & Shadow Festival, the 3rd Quanzhou Huaguang International Image Biennale, and Shanghai Spring Gallery, among other institutions and exhibitions.',
+  lanba:'She founded Lanba Art Museum from the ground up and served as its Art Director. The Wulong Lanba International Land Art Season, which she led, received five international awards — the Tokyo TDC Excellent Award, the US IES Illumination Award, the UK LDA Lighting Award, China Art Power List’s Annual Public Art Award, and gooood’s Global Top 20 Cultural Architecture.',
+  ai:'In AI she has built Omia, a minimalist product that brings reading back to content; Xiaoer FM, which turns music into generative visuals; and Xiaoer Save, which has no UI of its own. She continuously open-sources her product practice, design methods and workflows as tools for website-building, information processing, video creation, design and interface-free desktop AI — and has assembled a personal intelligent system connecting knowledge base, files, agents, skills, memory and automation.',
+};
+
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
 
@@ -158,26 +171,37 @@ function updateInfo(n){
   if(!n){ infocardEl.classList.remove('show'); return; }
   if(n.kind==='center'){
     infocardEl.innerHTML=`<div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
-      `<div class="d">${n.intro||''}</div><div class="go">CLICK · ${n.action||'进一步认识'} →</div>`;
+      `<div class="d">${n.intro||''}</div>`+(n.introEn?`<div class="d en">${n.introEn}</div>`:'')+
+      `<div class="go">CLICK · ${n.action||'进一步认识'} · MEET XIAOER →</div>`;
   }else{
     const dom=n.url?n.url.replace(/^https?:\/\//,'').replace(/^mailto:/,'').replace(/\/$/,''):'';
     infocardEl.innerHTML=`<div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
-      (dom?`<div class="d">${dom}</div>`:'')+(n.url?`<div class="go">CLICK · 前往 →</div>`:'');
+      (dom?`<div class="d">${dom}</div>`:'')+(n.url?`<div class="go">CLICK · 前往 · OPEN →</div>`:'');
   }
   infocardEl.classList.add('show');
 }
 function openAbout(){
   const c=NODES[0]||{}; const ab=c.about||{};
+  // 双语:中文上、英文下。英文取 API 英文列(*_en)优先,否则用内置 AB_EN
+  const sec=(k,zhTitle,enTitle)=>{
+    const zh=ab[k]; if(!zh) return '';
+    const en=ab[k+'_en']||AB_EN[k]||'';
+    return `<div class="about-sec"><div class="k">${zhTitle} · ${enTitle}</div><p>${zh}</p>`+
+      (en?`<p class="en">${en}</p>`:'')+`</div>`;
+  };
+  const leadZh=ab.intro||c.intro||'';
+  const leadEn=ab.intro_en||AB_EN.intro||'';
   aboutInner.innerHTML=
     `<div class="eyebrow">About · 关于小耳</div>`+
     `<h1>${c.label||'小耳'}</h1>`+
     `<div class="idw">${c.sub||'AI Artist × AI Builder × Creative Technologist'}</div>`+
-    `<div class="lead">${ab.intro||c.intro||''}</div>`+
-    (ab.story?`<div class="about-sec"><div class="k">The Path · 一条路径</div><p>${ab.story}</p></div>`:'')+
-    (ab.art?`<div class="about-sec"><div class="k">Art · 艺术与参展</div><p>${ab.art}</p></div>`:'')+
-    (ab.lanba?`<div class="about-sec"><div class="k">Lanba · 懒坝美术馆</div><p>${ab.lanba}</p></div>`:'')+
-    (ab.ai?`<div class="about-sec"><div class="k">AI · 产品与系统</div><p>${ab.ai}</p></div>`:'')+
-    `<div class="foot">· 内容随 Notion 更新 ·</div>`;
+    (leadZh?`<div class="lead">${leadZh}</div>`:'')+
+    (leadEn?`<div class="lead-en">${leadEn}</div>`:'')+
+    sec('story','一条路径','The Path')+
+    sec('art','艺术与参展','Art & Exhibitions')+
+    sec('lanba','懒坝美术馆','Lanba Art Museum')+
+    sec('ai','产品与系统','AI · Products & Systems')+
+    `<div class="foot">· 内容随 Notion 更新 · Synced with Notion ·</div>`;
   aboutOverlay.scrollTop=0; aboutOverlay.classList.add('show');
 }
 let W, H, DPR;
@@ -213,7 +237,7 @@ function buildGraph(root){
   NODES=[]; LINKS=[];
   const R1=245, R2=98;
   const center={ id:'me', kind:'center', label:root.label||'小耳', en:root.en||'Xiaoer',
-    sub:root.identity||root.sub||'', intro:root.hover||root.subtitle||'',
+    sub:root.identity||root.sub||'', intro:root.hover||root.subtitle||'', introEn:root.hoverEn||HOVER_EN,
     about:root.about||null, action:root.action||'进一步认识小耳', url:'',
     x:0,y:0,z:0, r:7 };
   NODES.push(center);
