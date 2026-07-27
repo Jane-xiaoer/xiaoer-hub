@@ -403,11 +403,11 @@ function frame(){
     // 压缩透视对点半径的放大 —— 近处的点不再膨胀得过大;邻居略放大
     const R=n.r*(0.62+0.38*p.persp)*zoom*(isHover?1.35:(gold?1.18:1));
     // glow —— 光晕更大更饱满,让星点自身发光、压过连线(浩瀚星空感)
-    const glowR = R*(n.kind==='center'?5:4.8);
+    const glowR = R*(n.kind==='center'?6.6:6.2);
     const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
-    const col = coral?'255,124,58':(gold?hlc.join(','):'235,230,240');
-    const gi = gold?0.72:(n.kind==='center'?0.68:0.64); // 内圈亮度
-    const gm = gold?0.3:(n.kind==='center'?0.26:0.24);   // 中圈亮度
+    const col = coral?'255,124,58':(gold?hlc.join(','):'240,236,246');
+    const gi = gold?0.82:(n.kind==='center'?0.8:0.78); // 内圈亮度
+    const gm = gold?0.34:(n.kind==='center'?0.32:0.3);   // 中圈亮度
     g.addColorStop(0,`rgba(${col},${gi*depth})`);
     g.addColorStop(0.4,`rgba(${col},${gm*depth})`);
     g.addColorStop(1,`rgba(${col},0)`);
