@@ -31,7 +31,31 @@
   .hud{position:fixed;left:34px;bottom:30px;z-index:10;font-size:10px;letter-spacing:.3em;color:rgba(255,255,255,.4);
     text-transform:uppercase;pointer-events:none}
   .hud b{color:var(--accent);font-weight:400}
-  @media(max-width:700px){.mark .zh{font-size:20px}.side-hint{display:none}}
+  /* hover 小卡片(右下,像 FM) */
+  .infocard{position:fixed;right:34px;bottom:96px;z-index:12;max-width:340px;text-align:right;
+    opacity:0;transform:translateY(8px);transition:opacity .3s ease,transform .3s ease;pointer-events:none;font-family:"Cutive Mono",monospace}
+  .infocard.show{opacity:1;transform:none}
+  .infocard .t{font-family:"Noto Serif SC",serif;font-weight:500;font-size:18px;color:#fff;letter-spacing:.06em}
+  .infocard .t .en{font-family:"Cutive Mono",monospace;font-size:9px;letter-spacing:.28em;color:var(--dim);margin-left:8px}
+  .infocard .d{font-size:12px;line-height:1.85;color:rgba(255,255,255,.6);margin-top:9px}
+  .infocard .go{font-size:9px;letter-spacing:.28em;color:var(--accent);margin-top:9px;text-transform:uppercase}
+  /* 详细介绍浮层 */
+  .about-overlay{position:fixed;inset:0;z-index:20;background:rgba(6,3,7,.975);backdrop-filter:blur(14px);
+    opacity:0;pointer-events:none;transition:opacity .5s ease;overflow-y:auto;overscroll-behavior:contain}
+  .about-overlay.show{opacity:1;pointer-events:auto}
+  .about-close{position:fixed;top:26px;right:34px;z-index:21;background:rgba(20,12,8,.4);border:1px solid rgba(255,255,255,.2);
+    color:rgba(255,255,255,.65);width:40px;height:40px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer;
+    transition:color .3s,border-color .3s,transform .3s}
+  .about-close:hover{color:var(--accent);border-color:var(--accent-soft);transform:rotate(90deg)}
+  .about-inner{max-width:720px;margin:0 auto;padding:112px 40px 96px}
+  .about-inner .eyebrow{font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.42em;color:var(--dim);text-transform:uppercase}
+  .about-inner h1{font-family:"Noto Serif SC",serif;font-weight:500;font-size:46px;letter-spacing:.14em;color:#fff;margin:16px 0 8px}
+  .about-inner .idw{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;color:var(--accent);letter-spacing:.03em}
+  .about-inner .lead{font-family:"Noto Serif SC",serif;font-weight:300;font-size:17px;line-height:2;color:rgba(255,255,255,.82);margin:28px 0 4px}
+  .about-sec{margin-top:32px;border-top:1px solid rgba(255,255,255,.09);padding-top:24px}
+  .about-sec .k{font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.34em;color:var(--accent);text-transform:uppercase;margin-bottom:12px}
+  .about-sec p{font-family:"Noto Serif SC",serif;font-weight:300;font-size:15px;line-height:2;color:rgba(255,255,255,.72)}
+  .about-inner .foot{margin-top:40px;font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.3em;color:rgba(255,255,255,.35);text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -44,6 +68,15 @@
   <div><span class="key">SCROLL</span> zoom</div>
   <div><span class="key">HOVER</span> reveal</div>
   <div><span class="key">CLICK</span> open</div>
+</div>
+
+<!-- hover 小卡片 -->
+<div class="infocard" id="infocard"></div>
+
+<!-- 点小耳 → 详细介绍浮层(内容来自 Notion) -->
+<div class="about-overlay" id="aboutOverlay">
+  <button class="about-close" id="aboutClose" aria-label="关闭">×</button>
+  <div class="about-inner" id="aboutInner"></div>
 </div>
 
 <script>
@@ -111,6 +144,42 @@ const ENRICH = {
 
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
+
+// hover 小卡片 + 详细介绍浮层
+const infocardEl = document.getElementById('infocard');
+const aboutOverlay = document.getElementById('aboutOverlay');
+const aboutInner = document.getElementById('aboutInner');
+document.getElementById('aboutClose').addEventListener('click',()=>aboutOverlay.classList.remove('show'));
+aboutOverlay.addEventListener('click',e=>{ if(e.target===aboutOverlay) aboutOverlay.classList.remove('show'); });
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') aboutOverlay.classList.remove('show'); });
+let lastHover=undefined;
+function updateInfo(n){
+  if(n===lastHover) return; lastHover=n;
+  if(!n){ infocardEl.classList.remove('show'); return; }
+  if(n.kind==='center'){
+    infocardEl.innerHTML=`<div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
+      `<div class="d">${n.intro||''}</div><div class="go">CLICK · ${n.action||'进一步认识'} →</div>`;
+  }else{
+    const dom=n.url?n.url.replace(/^https?:\/\//,'').replace(/^mailto:/,'').replace(/\/$/,''):'';
+    infocardEl.innerHTML=`<div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
+      (dom?`<div class="d">${dom}</div>`:'')+(n.url?`<div class="go">CLICK · 前往 →</div>`:'');
+  }
+  infocardEl.classList.add('show');
+}
+function openAbout(){
+  const c=NODES[0]||{}; const ab=c.about||{};
+  aboutInner.innerHTML=
+    `<div class="eyebrow">About · 关于小耳</div>`+
+    `<h1>${c.label||'小耳'}</h1>`+
+    `<div class="idw">${c.sub||'AI Artist × AI Builder × Creative Technologist'}</div>`+
+    `<div class="lead">${ab.intro||c.intro||''}</div>`+
+    (ab.story?`<div class="about-sec"><div class="k">The Path · 一条路径</div><p>${ab.story}</p></div>`:'')+
+    (ab.art?`<div class="about-sec"><div class="k">Art · 艺术与参展</div><p>${ab.art}</p></div>`:'')+
+    (ab.lanba?`<div class="about-sec"><div class="k">Lanba · 懒坝美术馆</div><p>${ab.lanba}</p></div>`:'')+
+    (ab.ai?`<div class="about-sec"><div class="k">AI · 产品与系统</div><p>${ab.ai}</p></div>`:'')+
+    `<div class="foot">· 内容随 Notion 更新 ·</div>`;
+  aboutOverlay.scrollTop=0; aboutOverlay.classList.add('show');
+}
 let W, H, DPR;
 function resize(){
   DPR = Math.min(window.devicePixelRatio||1, 2);
@@ -144,15 +213,16 @@ function buildGraph(root){
   NODES=[]; LINKS=[];
   const R1=245, R2=98;
   const center={ id:'me', kind:'center', label:root.label||'小耳', en:root.en||'Xiaoer',
-    sub:root.identity||root.sub||'', intro:root.subtitle||root.hover||'', url:root.aboutHref||root.about||'',
-    x:0,y:0,z:0, r:11 };
+    sub:root.identity||root.sub||'', intro:root.hover||root.subtitle||'',
+    about:root.about||null, action:root.action||'进一步认识小耳', url:'',
+    x:0,y:0,z:0, r:8 };
   NODES.push(center);
   const cats=(root.children||[]);
   cats.forEach((cat,ci)=>{
     const d=fib(ci, cats.length);
     const cx=d[0]*R1, cy=d[1]*R1, cz=d[2]*R1;
     const cnode={ id:'cat'+ci, kind:'cat', label:cat.label, en:cat.en||'', sub:cat.en||'', intro:'', url:'',
-      x:cx,y:cy,z:cz, r:6 };
+      x:cx,y:cy,z:cz, r:4.5 };
     NODES.push(cnode); LINKS.push([center,cnode]);
     const leaves=(cat.children||cat.nodes||[]);
     leaves.forEach((lf,li)=>{
@@ -166,12 +236,12 @@ function buildGraph(root){
       const lz=cz + (Math.cos(a)*t1[2]+Math.sin(a)*t2[2])*spread + d[2]*52;
       const lnode={ id:'l'+ci+'_'+li, kind:'leaf', label:lf.label, en:lf.en||'', sub:lf.en||'',
         intro:(lf.url||lf.href||''), url:lf.url||lf.href||'',
-        x:lx,y:ly,z:lz, r:3.4 };
+        x:lx,y:ly,z:lz, r:2.6 };
       NODES.push(lnode); LINKS.push([cnode,lnode]);
       // sub-hub: 奇物录 / 馆藏站 再展开一层
       const enr = ENRICH[lf.label];
       if(enr){
-        lnode.kind='subhub'; lnode.r=5.2; if(enr.current) lnode.current=true;
+        lnode.kind='subhub'; lnode.r=4; if(enr.current) lnode.current=true;
         const pd=norm([lx,ly,lz]);
         const pu=Math.abs(pd[1])>0.9?[1,0,0]:[0,1,0];
         const pt1=norm(cross(pd,pu)), pt2=norm(cross(pd,pt1));
@@ -180,7 +250,7 @@ function buildGraph(root){
           const sx=lx + (Math.cos(sa)*pt1[0]+Math.sin(sa)*pt2[0])*enr.r2 + pd[0]*20;
           const sy=ly + (Math.cos(sa)*pt1[1]+Math.sin(sa)*pt2[1])*enr.r2 + pd[1]*20;
           const sz=lz + (Math.cos(sa)*pt1[2]+Math.sin(sa)*pt2[2])*enr.r2 + pd[2]*20;
-          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:2.6 };
+          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:1.9 };
           NODES.push(snode); LINKS.push([lnode,snode]);
         });
       }
@@ -222,8 +292,8 @@ function project(n){
 let hover=null;
 cv.addEventListener('click',()=>{
   if(moved)return;
-  if(hover && hover.url) window.open(hover.url,'_blank','noopener');
-  else if(hover && hover.kind==='center'){ const c=NODES[0]; if(c.url) window.open(c.url,'_blank','noopener'); }
+  if(hover && hover.kind==='center') openAbout();
+  else if(hover && hover.url) window.open(hover.url,'_blank','noopener');
 });
 
 // ── render loop ──
@@ -250,6 +320,8 @@ function frame(){
     const hitR = Math.max(14, NODES[i].r*p.scale+10);
     if(dd<hitR && dd<best){best=dd;hover=NODES[i];hover._p=p;}
   }
+  updateInfo(hover);
+  if(!dragging) cv.style.cursor = hover ? 'pointer' : 'grab';
   // links (draw back-to-front by mid z)
   const order=LINKS.map((L,i)=>({i,z:(project(L[0]).z+project(L[1]).z)/2})).sort((a,b)=>a.z-b.z);
   for(const {i} of order){
@@ -269,10 +341,10 @@ function frame(){
     const R=n.r*p.scale*(isHover?1.35:1);
     const coral = n.kind==='center' || isHover;
     // glow
-    const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,R*4);
+    const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,R*3.3);
     const col = coral?'255,124,58':'235,230,240';
     g.addColorStop(0,`rgba(${col},${0.5*depth})`); g.addColorStop(1,`rgba(${col},0)`);
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,R*4,0,7); ctx.fill();
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,R*3.3,0,7); ctx.fill();
     // core
     ctx.fillStyle = coral?`rgba(255,150,90,${0.95*depth})`:`rgba(255,255,255,${0.85*depth})`;
     ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,7); ctx.fill();
