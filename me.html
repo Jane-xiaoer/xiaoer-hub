@@ -328,7 +328,7 @@ cv.addEventListener('click',()=>{
 
 // ── render loop ──
 function frame(){
-  autoYaw += dragging?0:0.00045;
+  autoYaw += dragging?0:0.00021;
   ctx.clearRect(0,0,W,H);
   // deep background starfield (behind everything)
   const now=performance.now()*0.001;
