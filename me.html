@@ -371,18 +371,20 @@ function frame(){
     const A = active ? Math.min(0.7, (0.06+0.1*mid)*6) : Math.min(0.28, 0.1+0.13*mid);
     const col = active ? HL_PALETTES[hlKey].join(',') : '196,194,206'; // 静止=灰线,hover=蓝高亮
     ctx.lineWidth = active?1.15:0.7;
+    // 两端往内收 —— 连线更短,在星点附近留出空隙(不扎进大光晕)
+    const tr=0.26, ax=a.sx+(b.sx-a.sx)*tr, ay=a.sy+(b.sy-a.sy)*tr, bx=b.sx-(b.sx-a.sx)*tr, by=b.sy-(b.sy-a.sy)*tr;
     if(lineMode===1){ // 虚线(faint dashed)
       ctx.save(); ctx.setLineDash([2,6]);
       ctx.strokeStyle=`rgba(${col},${A})`;
-      ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
       ctx.restore();
-    }else{ // 0: 常态连续细线(连到星点,两端略淡,中段清晰)
-      const grad = ctx.createLinearGradient(a.sx,a.sy,b.sx,b.sy);
+    }else{ // 0: 常态连续细线(中段清晰,两端略淡)
+      const grad = ctx.createLinearGradient(ax,ay,bx,by);
       grad.addColorStop(0,`rgba(${col},${A*0.55})`);
       grad.addColorStop(0.5,`rgba(${col},${A})`);
       grad.addColorStop(1,`rgba(${col},${A*0.55})`);
       ctx.strokeStyle=grad;
-      ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
     }
   }
   // nodes back-to-front
@@ -394,8 +396,8 @@ function frame(){
     const coral = n.kind==='center' || isHover;
     const gold = !coral && nbr.has(n); // 邻居高亮(蓝/黄)
     const hlc = HL_PALETTES[hlKey];
-    // 压缩透视对点半径的放大 —— 近处的点不再膨胀得过大;邻居略放大
-    const R=n.r*(0.62+0.38*p.persp)*zoom*(isHover?1.35:(gold?1.18:1));
+    // 近大远小 —— 放开透视,让近处的点明显大于远处(Jane 觉得这样更舒服);邻居略放大
+    const R=n.r*(0.35+0.7*p.persp)*zoom*(isHover?1.35:(gold?1.18:1));
     // glow —— 光晕更大更饱满,让星点自身发光、压过连线(浩瀚星空感)
     const glowR = R*(n.kind==='center'?6.6:6.2);
     const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
