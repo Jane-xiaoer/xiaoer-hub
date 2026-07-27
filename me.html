@@ -288,7 +288,13 @@ function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2
 let yaw=0.3, pitch=-0.15, autoYaw=0;
 let zoom=1;
 let lineMode=1; // 0 微光渐变 · 1 虚线 · 2 无线 (按 L 循环对比)
-window.addEventListener('keydown',e=>{ if(e.key==='l'||e.key==='L'){ lineMode=(lineMode+1)%3; } });
+// 悬停高亮色 —— 蓝(珊瑚橙互补色,高级)/ 黄。按 K 切换对比
+const HL_PALETTES={ blue:[74,164,255], gold:[255,205,90] };
+let hlKey='blue';
+window.addEventListener('keydown',e=>{
+  if(e.key==='l'||e.key==='L'){ lineMode=(lineMode+1)%3; }
+  if(e.key==='k'||e.key==='K'){ hlKey = hlKey==='blue'?'gold':'blue'; }
+});
 let dragging=false, lx=0, ly=0, moved=false;
 cv.addEventListener('mousedown',e=>{dragging=true;moved=false;lx=e.clientX;ly=e.clientY;document.documentElement.classList.add('dragging');});
 window.addEventListener('mouseup',()=>{dragging=false;document.documentElement.classList.remove('dragging');});
@@ -352,6 +358,9 @@ function frame(){
   }
   updateInfo(hover);
   if(!dragging) cv.style.cursor = hover ? 'pointer' : 'grab';
+  // 悬停时:直连的邻居节点集合 —— 用金黄色高亮,让"当前选中的这一串"从旋转背景里跳出来
+  const nbr=new Set();
+  if(hover){ for(const L of LINKS){ if(L[0]===hover)nbr.add(L[1]); else if(L[1]===hover)nbr.add(L[0]); } }
   // links (draw back-to-front by mid z)
   const order=LINKS.map((L,i)=>({i,z:(project(L[0]).z+project(L[1]).z)/2})).sort((a,b)=>a.z-b.z);
   if(lineMode!==2) for(const {i} of order){
@@ -359,8 +368,8 @@ function frame(){
     const active = hover && (LINKS[i][0]===hover||LINKS[i][1]===hover);
     // 星空里连线本是眼睛脑补的 —— 两端在星点处淡出,只在中段留一缕微光,视觉上更短更含蓄
     const mid=(a.persp+b.persp)/2;
-    const A = active ? Math.min(0.5, (0.05+0.09*mid)*6) : Math.min(0.1, 0.02+0.05*mid);
-    const col = active ? '255,124,58' : '188,184,200';
+    const A = active ? Math.min(0.6, (0.05+0.09*mid)*7) : Math.min(0.1, 0.02+0.05*mid);
+    const col = active ? HL_PALETTES[hlKey].join(',') : '188,184,200';
     ctx.lineWidth = active?1.0:0.5;
     if(lineMode===1){ // 虚线(faint dashed)
       ctx.save(); ctx.setLineDash([2,6]);
@@ -383,20 +392,29 @@ function frame(){
     const n=NODES[i], p=P[i];
     const depth=Math.max(0.25,p.persp);
     const isHover = hover===n;
-    // 压缩透视对点半径的放大 —— 近处的点不再膨胀得过大
-    const R=n.r*(0.62+0.38*p.persp)*zoom*(isHover?1.35:1);
     const coral = n.kind==='center' || isHover;
+    const gold = !coral && nbr.has(n); // 邻居高亮(蓝/黄)
+    const hlc = HL_PALETTES[hlKey];
+    // 压缩透视对点半径的放大 —— 近处的点不再膨胀得过大;邻居略放大
+    const R=n.r*(0.62+0.38*p.persp)*zoom*(isHover?1.35:(gold?1.18:1));
     // glow —— 光晕更大更饱满,让星点自身发光、压过连线(浩瀚星空感)
     const glowR = R*(n.kind==='center'?4.6:4.4);
     const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
-    const col = coral?'255,124,58':'235,230,240';
-    g.addColorStop(0,`rgba(${col},${(n.kind==='center'?0.62:0.58)*depth})`);
-    g.addColorStop(0.4,`rgba(${col},${(n.kind==='center'?0.22:0.2)*depth})`);
+    const col = coral?'255,124,58':(gold?hlc.join(','):'235,230,240');
+    const gi = gold?0.66:(n.kind==='center'?0.62:0.58); // 内圈亮度
+    const gm = gold?0.26:(n.kind==='center'?0.22:0.2);   // 中圈亮度
+    g.addColorStop(0,`rgba(${col},${gi*depth})`);
+    g.addColorStop(0.4,`rgba(${col},${gm*depth})`);
     g.addColorStop(1,`rgba(${col},0)`);
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,glowR,0,7); ctx.fill();
     // core
-    ctx.fillStyle = coral?`rgba(255,150,90,${0.95*depth})`:`rgba(255,255,255,${0.85*depth})`;
+    ctx.fillStyle = coral?`rgba(255,150,90,${0.95*depth})`:(gold?`rgba(${hlc[0]+40>255?255:hlc[0]+40},${hlc[1]+30>255?255:hlc[1]+30},${hlc[2]+20>255?255:hlc[2]+20},${0.95*depth})`:`rgba(255,255,255,${0.85*depth})`);
     ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,7); ctx.fill();
+    // 邻居高亮环
+    if(gold){
+      ctx.strokeStyle=`rgba(${hlc.join(',')},${0.55*depth})`; ctx.lineWidth=0.9;
+      ctx.beginPath(); ctx.arc(p.sx,p.sy,R+5,0,7); ctx.stroke();
+    }
     // ring for center + hover (tol.is crosshair vibe)
     if(n.kind==='center'||isHover){
       ctx.strokeStyle=`rgba(255,124,58,${0.5*depth})`; ctx.lineWidth=1;
@@ -418,7 +436,7 @@ function frame(){
       ctx.textAlign='left';
     }
     // labels: center always; cats always; leaves when hover or near-front
-    const showLabel = n.kind==='center'||n.kind==='cat'||n.kind==='subhub'||n.current || isHover
+    const showLabel = n.kind==='center'||n.kind==='cat'||n.kind==='subhub'||n.current || isHover || gold
       || (n.kind==='leaf'&&p.persp>0.82) || (n.kind==='sub'&&(isHover||p.persp>0.92));
     if(n.kind==='center'){
       // 中心小耳：小耳 / XIAOER / 三个身份 叠成一栈
@@ -438,12 +456,12 @@ function frame(){
       });
     }else if(showLabel){
       const fs = (n.kind==='cat'?13:(n.kind==='subhub'?12:(n.kind==='sub'?10:11)));
-      const la = (isHover?1:0.5*depth+0.2);
+      const la = (isHover||gold?1:0.5*depth+0.2);
       ctx.textAlign='left'; ctx.textBaseline='middle';
       const ox=R+10;
       // zh
       ctx.font=`${n.kind==='leaf'?'':'500 '}${fs}px "Noto Serif SC","Cutive Mono",monospace`;
-      ctx.fillStyle= coral?`rgba(255,150,90,${la})`:`rgba(255,255,255,${la})`;
+      ctx.fillStyle= coral?`rgba(255,150,90,${la})`:(gold?`rgba(${HL_PALETTES[hlKey].join(',')},${la})`:`rgba(255,255,255,${la})`);
       ctx.fillText(n.label, p.sx+ox, p.sy - (n.en?5:0));
       // en / sub
       if(n.en){
