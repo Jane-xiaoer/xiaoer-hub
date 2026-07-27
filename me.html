@@ -235,49 +235,54 @@ function fib(i, n){ // fibonacci sphere direction
 }
 function buildGraph(root){
   NODES=[]; LINKS=[];
-  const R1=245, R2=98;
+  const R1=255;
   const center={ id:'me', kind:'center', label:root.label||'小耳', en:root.en||'Xiaoer',
     sub:root.identity||root.sub||'', intro:root.hover||root.subtitle||'', introEn:root.hoverEn||HOVER_EN,
     about:root.about||null, action:root.action||'进一步认识小耳', url:'',
     x:0,y:0,z:0, r:8 };
   NODES.push(center);
-  const cats=(root.children||[]);
-  cats.forEach((cat,ci)=>{
-    const d=fib(ci, cats.length);
-    const cx=d[0]*R1, cy=d[1]*R1, cz=d[2]*R1;
-    const cnode={ id:'cat'+ci, kind:'cat', label:cat.label, en:cat.en||'', sub:cat.en||'', intro:'', url:'',
-      x:cx,y:cy,z:cz, r:4 };
-    NODES.push(cnode); LINKS.push([center,cnode]);
+
+  // 1) 组装"臂":把大子枢纽(奇物录/馆藏站)提升为独立臂,与类目并列 —— 均衡 360°,不再一坨挂在"网站作品"下
+  const arms=[];
+  (root.children||[]).forEach(cat=>{
     const leaves=(cat.children||cat.nodes||[]);
-    leaves.forEach((lf,li)=>{
-      // spread leaves around the category direction, on a small local ring tilted outward
-      const a=(li/Math.max(1,leaves.length))*Math.PI*2 + ci*1.3;
-      const up=Math.abs(d[1])>0.9?[1,0,0]:[0,1,0];
-      const t1=norm(cross(d,up)), t2=norm(cross(d,t1));
-      const spread=R2*(0.8+0.5*Math.random());
-      const lx=cx + (Math.cos(a)*t1[0]+Math.sin(a)*t2[0])*spread + d[0]*52;
-      const ly=cy + (Math.cos(a)*t1[1]+Math.sin(a)*t2[1])*spread + d[1]*52;
-      const lz=cz + (Math.cos(a)*t1[2]+Math.sin(a)*t2[2])*spread + d[2]*52;
-      const lnode={ id:'l'+ci+'_'+li, kind:'leaf', label:lf.label, en:lf.en||'', sub:lf.en||'',
-        intro:(lf.url||lf.href||''), url:lf.url||lf.href||'',
-        x:lx,y:ly,z:lz, r:2.4 };
-      NODES.push(lnode); LINKS.push([cnode,lnode]);
-      // sub-hub: 奇物录 / 馆藏站 再展开一层
-      const enr = ENRICH[lf.label];
-      if(enr){
-        lnode.kind='subhub'; lnode.r=3.6; if(enr.current) lnode.current=true;
-        const pd=norm([lx,ly,lz]);
-        const pu=Math.abs(pd[1])>0.9?[1,0,0]:[0,1,0];
-        const pt1=norm(cross(pd,pu)), pt2=norm(cross(pd,pt1));
-        enr.subs.forEach((sb,si)=>{
-          const sa=(si/enr.subs.length)*Math.PI*2 + li;
-          const sx=lx + (Math.cos(sa)*pt1[0]+Math.sin(sa)*pt2[0])*enr.r2 + pd[0]*20;
-          const sy=ly + (Math.cos(sa)*pt1[1]+Math.sin(sa)*pt2[1])*enr.r2 + pd[1]*20;
-          const sz=lz + (Math.cos(sa)*pt1[2]+Math.sin(sa)*pt2[2])*enr.r2 + pd[2]*20;
-          const snode={ id:lnode.id+'_s'+si, kind:'sub', label:sb.label, en:sb.en||'', sub:sb.en||'', url:sb.url||'', x:sx,y:sy,z:sz, r:1.8 };
-          NODES.push(snode); LINKS.push([lnode,snode]);
-        });
-      }
+    const plain=[];
+    leaves.forEach(lf=>{
+      const enr=ENRICH[lf.label];
+      if(enr) arms.push({ kind:'subhub', label:lf.label, en:lf.en||'', url:lf.url||lf.href||'',
+                          current:!!enr.current, kids:enr.subs, childKind:'sub' });
+      else plain.push(lf);
+    });
+    if(plain.length || !leaves.length) arms.push({ kind:'cat', label:cat.label, en:cat.en||'', url:'', kids:plain, childKind:'leaf' });
+  });
+
+  // 2) 大小交错排列 —— 让子节点多的重臂彼此隔开(配合 golden-angle 相邻方向相距 ~137°)
+  arms.forEach(a=> a.w = (a.kids?a.kids.length:0));
+  arms.sort((a,b)=> b.w - a.w);
+  const ordered=[]; let i=0, j=arms.length-1;
+  while(i<=j){ ordered.push(arms[i++]); if(i<=j) ordered.push(arms[j--]); }
+
+  // 3) 逐臂布置:臂节点落在 R1 球面,子节点绕其铺开(子越多铺得越大,密度趋于均匀)
+  ordered.forEach((arm,ai)=>{
+    const d=fib(ai, ordered.length);
+    const ax=d[0]*R1, ay=d[1]*R1, az=d[2]*R1;
+    const anode={ id:'arm'+ai, kind:arm.kind, label:arm.label, en:arm.en, sub:arm.en, intro:'', url:arm.url||'',
+      current:arm.current, x:ax,y:ay,z:az, r: arm.kind==='subhub'?3.6:4 };
+    NODES.push(anode); LINKS.push([center,anode]);
+    const kids=arm.kids||[];
+    const up=Math.abs(d[1])>0.9?[1,0,0]:[0,1,0];
+    const t1=norm(cross(d,up)), t2=norm(cross(d,t1));
+    const spread=66*(0.6+0.5*Math.sqrt(kids.length||1));
+    kids.forEach((kf,ki)=>{
+      const a=(ki/Math.max(1,kids.length))*Math.PI*2 + ai*1.3;
+      const rr=spread*(0.78+0.34*Math.random());
+      const kx=ax+(Math.cos(a)*t1[0]+Math.sin(a)*t2[0])*rr + d[0]*44;
+      const ky=ay+(Math.cos(a)*t1[1]+Math.sin(a)*t2[1])*rr + d[1]*44;
+      const kz=az+(Math.cos(a)*t1[2]+Math.sin(a)*t2[2])*rr + d[2]*44;
+      const knode={ id:'k'+ai+'_'+ki, kind:arm.childKind, label:kf.label, en:kf.en||'', sub:kf.en||'',
+        intro:(kf.url||kf.href||''), url:kf.url||kf.href||'',
+        x:kx,y:ky,z:kz, r: arm.kind==='subhub'?1.8:2.4 };
+      NODES.push(knode); LINKS.push([anode,knode]);
     });
   });
 }
@@ -311,7 +316,7 @@ window.addEventListener('wheel',e=>{
   e.preventDefault();
   zoom=Math.max(.55,Math.min(2.4,zoom*(e.deltaY>0?0.92:1.08)));
 },{passive:false});
-let mx=W/2,my=H/2;
+let mx=-9999,my=-9999; // 初始鼠标在屏外 —— 加载先是安静星空,移上去才高亮
 
 function project(n){
   // rotate by yaw (around Y) then pitch (around X)
