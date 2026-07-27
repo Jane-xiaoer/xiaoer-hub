@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>小耳的馆藏</title>
-<meta name="description" content="小耳的馆藏 — 五个馆,各自一个形状,点亮选一个进入" />
+<meta name="description" content="小耳的馆藏 — 六个馆,各自一个形状,点亮选一个进入" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Cutive+Mono&family=Noto+Serif+SC:wght@300;500&display=swap" rel="stylesheet">
 
@@ -72,6 +72,8 @@
     color: rgba(255,255,255,0.4);
     text-transform: uppercase;
   }
+  nav a.about { pointer-events: auto; text-decoration: none; cursor: pointer; transition: color 0.3s ease; }
+  nav a.about:hover { color: #ff9b52; }
 
   /* ─── Centre label (the room name) ─── */
   .centre-label {
@@ -146,8 +148,8 @@
     z-index: 10;
     display: flex;
     align-items: center;
-    gap: 28px;
-    padding: 18px 28px;
+    gap: 22px;
+    padding: 18px 24px;
     border: 1px solid rgba(255,255,255,0.10);
     border-radius: 100px;
     background: rgba(10, 8, 18, 0.55);
@@ -252,7 +254,9 @@
   @media (max-width: 700px) {
     .centre-label .zh { font-size: 28px; }
     .centre-label, .idle-hint { transform: translate(-50%, calc(-50% - 160px)); }
-    .dock { gap: 14px; padding: 14px 18px; }
+    .dock { gap: 10px; padding: 14px 16px; }
+    .dock-btn { padding: 6px 8px; }
+    .dock-btn .ico { width: 26px; height: 26px; }
     .dock-divider { display: none; }
     .dock-btn .label { display: none; }
     .side-hint { display: none; }
@@ -265,7 +269,7 @@
 
 <nav>
   <div class="mark"><span class="ear">👂</span>小耳的馆藏</div>
-  <div class="meta">FIVE ROOMS &middot; v1</div>
+  <a class="meta about" href="me.html">About&nbsp;Me</a>
 </nav>
 
 <div class="hud-top">CHOOSE A ROOM</div>
@@ -282,7 +286,7 @@
 </div>
 
 <div class="dock" id="dock">
-  <!-- five buttons injected by JS -->
+  <!-- room buttons injected by JS -->
 </div>
 
 <button class="confirm" id="confirm">Enter</button>
@@ -311,14 +315,16 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-// ─── Five rooms × five visually-distinct shapes × five vivid colours ──
+// ─── Six rooms × six visually-distinct shapes × six vivid colours ──
 const N = 14000;
 const ROOMS = [
-  { num:'01', zh:'城市馆', en:'City',     color:0x3a90ff, shape:'cube',   url:'https://city-threejs.vercel.app' },
-  { num:'02', zh:'跳舞馆', en:'Dance',    color:0xff4a8a, shape:'cone',   url:'https://dance-beta.vercel.app' },
-  { num:'03', zh:'居家馆', en:'Home',     color:0xffc63a, shape:'house',  url:'https://ai-mvp-psi.vercel.app' },
-  { num:'04', zh:'肖像馆', en:'Portrait', color:0x3aeab0, shape:'sphere', url:'https://headshot-psi-indol.vercel.app' },
-  { num:'05', zh:'相机馆', en:'Camera',   color:0xff7c3a, shape:'torus',  url:'https://camera-museum-nine.vercel.app' },
+  { num:'01', zh:'城市馆', en:'City',     color:0x3a90ff, shape:'cube',   url:'https://city.xiaoercamera.xyz/' },
+  { num:'02', zh:'跳舞馆', en:'Dance',    color:0xff4a8a, shape:'cone',   url:'https://dance.xiaoercamera.xyz/' },
+  { num:'03', zh:'居家馆', en:'Home',     color:0xffc63a, shape:'house',  url:'https://home.xiaoercamera.xyz/' },
+  { num:'04', zh:'肖像馆', en:'Portrait', color:0x3aeab0, shape:'sphere', url:'https://portrait.xiaoercamera.xyz/' },
+  { num:'05', zh:'相机馆', en:'Camera',   color:0xff7c3a, shape:'torus',  url:'https://camera.xiaoercamera.xyz/' },
+  { num:'06', zh:'弹珠馆', en:'Marbles',  color:0xb88cff, shape:'icosa',  url:'https://marbles.xiaoercamera.xyz/' },
+  { num:'07', zh:'音乐馆', en:'Music',    color:0x2ad4d4, shape:'octa',   url:'https://fm.xiaoercamera.xyz/' },
 ];
 
 // Tiny SVG wireframes for the dock icons (match the 3D shape)
@@ -328,6 +334,8 @@ const ICON_SVG = {
   house:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 11 L12 4 L20 11 V20 H4 Z"/><path d="M10 20 V14 H14 V20"/></svg>',
   sphere: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="3.5" ry="9"/></svg>',
   torus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="5" ry="2.2"/></svg>',
+  icosa:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"><path d="M12 3 L20 8 L17 20 H7 L4 8 Z"/><path d="M12 3 L12 14 L20 8"/><path d="M12 14 L17 20"/><path d="M12 14 L7 20"/><path d="M12 14 L4 8"/></svg>',
+  octa:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 2 L21 12 L12 22 L3 12 Z"/><path d="M3 12 H21"/><path d="M12 2 V22"/></svg>',
 };
 
 // House shape: 5-sided pitched-roof silhouette extruded into 3D
@@ -359,6 +367,8 @@ function makeGeometry(name) {
     case 'house':  return makeHouseGeometry();
     case 'sphere': return new THREE.SphereGeometry(1.7, 64, 48);
     case 'torus':  { const g = new THREE.TorusGeometry(1.5, 0.5, 32, 96); g.rotateX(Math.PI * 0.32); return g; }
+    case 'icosa':  { const g = new THREE.IcosahedronGeometry(1.85, 2); g.rotateZ(Math.PI * 0.08); return g; }
+    case 'octa':   { const g = new THREE.OctahedronGeometry(1.95, 0); g.rotateY(Math.PI * 0.25); return g; }
     default:       return new THREE.SphereGeometry(1.6, 32, 32);
   }
 }
@@ -749,6 +759,7 @@ window.addEventListener('keydown', e => {
   else if   (e.code === 'Digit3') selectRoom(2, { lock: true });
   else if   (e.code === 'Digit4') selectRoom(3, { lock: true });
   else if   (e.code === 'Digit5') selectRoom(4, { lock: true });
+  else if   (e.code === 'Digit6') selectRoom(5, { lock: true });
 });
 
 // Mouse wheel = camera dolly (zoom into / out of the particle cloud)
