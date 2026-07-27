@@ -74,6 +74,7 @@
   }
   nav a.about { pointer-events: auto; text-decoration: none; cursor: pointer; transition: color 0.3s ease; }
   nav a.about:hover { color: #ff9b52; }
+  nav .meta .z { font-family: "Noto Serif SC", serif; font-weight: 500; font-size: 12px; letter-spacing: 0.1em; text-transform: none; }
 
   /* ─── Centre label (the room name) ─── */
   .centre-label {
@@ -176,13 +177,22 @@
   }
   .dock-btn.active .ico { filter: drop-shadow(0 0 14px var(--g, transparent)); }
   .dock-btn .label {
+    font-family: "Noto Serif SC", serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.66);
+  }
+  .dock-btn .en {
     font-family: "Cutive Mono", monospace;
-    font-size: 9px;
-    letter-spacing: 0.18em;
+    font-size: 8px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255,255,255,0.38);
+    margin-top: 3px;
   }
   .dock-btn.active .label { color: var(--c, #fff); }
+  .dock-btn.active .en { color: var(--c, #fff); opacity: 0.7; }
 
   .dock-divider {
     width: 1px; height: 22px;
@@ -258,7 +268,7 @@
     .dock-btn { padding: 6px 8px; }
     .dock-btn .ico { width: 26px; height: 26px; }
     .dock-divider { display: none; }
-    .dock-btn .label { display: none; }
+    .dock-btn .label, .dock-btn .en { display: none; }
     .side-hint { display: none; }
   }
 </style>
@@ -269,7 +279,7 @@
 
 <nav>
   <div class="mark"><span class="ear">👂</span>小耳的馆藏</div>
-  <a class="meta about" href="me.html">About&nbsp;Me</a>
+  <a class="meta about" href="me.html"><span class="z">关于小耳</span>&nbsp;·&nbsp;About&nbsp;Me</a>
 </nav>
 
 <div class="hud-top">CHOOSE A ROOM</div>
@@ -613,6 +623,7 @@ ROOMS.forEach((r, i) => {
   btn.innerHTML = `
     <div class="ico">${ICON_SVG[r.shape]}</div>
     <div class="label">${r.zh}</div>
+    <div class="en">${r.en}</div>
   `;
   // CLICK ONLY — hover gives UI feedback but doesn't morph the swarm.
   btn.addEventListener('click', () => selectRoom(i, { lock: true }));
