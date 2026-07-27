@@ -399,17 +399,18 @@ function frame(){
     // 近大远小 —— 放开透视,让近处的点明显大于远处(Jane 觉得这样更舒服);邻居略放大
     const R=n.r*(0.35+0.7*p.persp)*zoom*(isHover?1.35:(gold?1.18:1));
     // glow —— 光晕更大更饱满,让星点自身发光、压过连线(浩瀚星空感)
-    const glowR = R*(n.kind==='center'?6.6:6.2);
+    // 光晕收紧成一圈 halo,让亮白核心清晰凸出(像 Jane 要的第二张:亮点 + 光环,而非糊团)
+    const glowR = R*(n.kind==='center'?4.3:4.1);
     const g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
     const col = coral?'255,124,58':(gold?hlc.join(','):'240,236,246');
-    const gi = gold?0.82:(n.kind==='center'?0.8:0.78); // 内圈亮度
-    const gm = gold?0.34:(n.kind==='center'?0.32:0.3);   // 中圈亮度
+    const gi = gold?0.85:(n.kind==='center'?0.82:0.8); // 内圈亮度
+    const gm = gold?0.32:(n.kind==='center'?0.3:0.28);  // 中圈亮度
     g.addColorStop(0,`rgba(${col},${gi*depth})`);
-    g.addColorStop(0.4,`rgba(${col},${gm*depth})`);
+    g.addColorStop(0.35,`rgba(${col},${gm*depth})`);
     g.addColorStop(1,`rgba(${col},0)`);
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,glowR,0,7); ctx.fill();
-    // core
-    ctx.fillStyle = coral?`rgba(255,150,90,${0.95*depth})`:(gold?`rgba(${hlc[0]+40>255?255:hlc[0]+40},${hlc[1]+30>255?255:hlc[1]+30},${hlc[2]+20>255?255:hlc[2]+20},${0.95*depth})`:`rgba(255,255,255,${0.85*depth})`);
+    // core —— 亮白实心核心,清爽凸出
+    ctx.fillStyle = coral?`rgba(255,158,100,${0.98*depth})`:(gold?`rgba(${Math.min(255,hlc[0]+50)},${Math.min(255,hlc[1]+40)},${Math.min(255,hlc[2]+25)},${0.98*depth})`:`rgba(255,255,255,${0.96*depth})`);
     ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,7); ctx.fill();
     // 邻居高亮环
     if(gold){
