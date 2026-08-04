@@ -297,9 +297,9 @@ function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2
 // ── 星空转动手感(光标特效由 js/cursor-fx.js 负责,这两个参数搭它的调参面板) ──
 if(window.CursorFX) CursorFX.addParams({
   inertia :{label:'拖拽惯性',min:0.80,max:0.98,step:0.005,value:0.98},   // 松手后滑多久 ← Jane 2026-08-04 拖定(拉满,要长滑行)
-  autoSpin:{label:'自转速度',min:0,max:0.0008,step:0.00001,value:0.00038} // ← Jane 拖定(比原来 0.00017 快一倍多)
+  autoSpin:{label:'自转速度',min:0,max:0.0008,step:0.00001,value:0.00046} // ← Jane 拖定(比原来 0.00017 快一倍多)
 });
-const SPIN=(window.CursorFX&&CursorFX.ext)||{inertia:0.98,autoSpin:0.00038};
+const SPIN=(window.CursorFX&&CursorFX.ext)||{inertia:0.98,autoSpin:0.00046};
 
 // ── rotation + projection ──
 let yaw=0.3, pitch=-0.15, autoYaw=0;
