@@ -19,6 +19,8 @@
     ringA: 0.31,        // 环亮度(常态；压到东西上会自动提亮)  ← Jane 2026-08-04 拖定
     ease: 0.53,         // 跟随阻尼：小=拖尾更黏，1=硬跟随      ← Jane 拖定
     spin: 0.4,          // 虚线环自转(圈/秒)                    ← Jane 拖定
+    trail: 1,           // 鼠标移动时身后的虚线拖尾
+    trailT: 620,        // 拖尾留多久 ms(停下就自己散掉)
     readout: 1,         // 坐标读数 + 事件编号
     ripple: 1,          // 点击涟漪
     rippleR: 280,       // 涟漪最大半径
@@ -72,11 +74,14 @@
   let mx = -9999, my = -9999;              // 真实鼠标
   const cur = { x: -9999, y: -9999, r: O.ringR }; // 环(带阻尼，落后一点)
   let hotEl = null;                        // 鼠标下的可交互 DOM
+  let TRAIL = [];                          // 移动轨迹(拖尾)
   let RIPPLES = [], evtNo = 0, live = null, downX = 0, downY = 0;
 
   addEventListener('mousemove', e => {
     mx = e.clientX; my = e.clientY;
     if (cur.x < -1000) { cur.x = mx; cur.y = my; }  // 第一次进来别从屏外飞过来
+    const last = TRAIL[TRAIL.length - 1];
+    if (!last || Math.hypot(mx - last.x, my - last.y) > 5) TRAIL.push({ x: mx, y: my, t: performance.now() });
     const t = e.target;
     hotEl = (t && t.closest) ? t.closest(O.hotSel) : null;
     if (live && Math.abs(mx - downX) + Math.abs(my - downY) > 3) live.dead = true; // 变成拖拽了，涟漪收掉
@@ -96,6 +101,26 @@
     ctx.clearRect(0, 0, W, H);
     const now = performance.now();
     document.documentElement.classList.toggle('cfx-on', !!O.cursor);
+
+    // 移动拖尾：身后拖一串一条一条的短虚线，按年龄淡出；停下来 trailT 内自己散干净。
+    // 每一小段都硬性截断到 DASH 长度 —— 鼠标甩得再快也不会把两个远点连成长线拉出斜网纹。
+    if (O.trail && TRAIL.length) {
+      TRAIL = TRAIL.filter(p => now - p.t < O.trailT);
+      if (TRAIL.length > 48) TRAIL = TRAIL.slice(-48);
+      const DASH = 7;
+      ctx.save(); ctx.setLineDash([]); ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+      for (let i = 1; i < TRAIL.length; i++) {
+        const p = TRAIL[i], q = TRAIL[i - 1];
+        const vx = p.x - q.x, vy = p.y - q.y, len = Math.hypot(vx, vy) || 1;
+        const k = Math.min(DASH, len) / len;               // 只画贴着该点的一小截
+        const age = (now - p.t) / O.trailT;
+        ctx.strokeStyle = `rgba(${O.base},${O.ringA * 0.85 * (1 - age)})`;
+        ctx.beginPath();
+        ctx.moveTo(p.x - vx * k, p.y - vy * k); ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     // 涟漪：从落点扩散的细环，ease-out 出去、越远越淡
     if (RIPPLES.length) {
@@ -196,9 +221,10 @@
   const SLIDERS = [
     ['ringR', '光标环半径', 8, 50, 1], ['ringA', '环亮度', 0.15, 1, 0.02],
     ['ease', '跟随阻尼', 0.05, 1, 0.01], ['spin', '环自转', 0, 2, 0.05],
+    ['trailT', '拖尾长度', 150, 1600, 20],
     ['rippleR', '涟漪半径', 60, 600, 10], ['rippleT', '涟漪时长', 300, 2500, 50], ['rippleN', '涟漪环数', 1, 3, 1]
   ];
-  const TOGGLES = [['cursor', '准星光标'], ['readout', '坐标读数'], ['ripple', '点击涟漪']];
+  const TOGGLES = [['cursor', '准星光标'], ['readout', '坐标读数'], ['ripple', '点击涟漪'], ['trail', '移动拖尾']];
   let panel = null;
   function row(k, label, a, b, s, v) {
     return `<div class="row">${label}<span id="cfxv_${k}">${v}</span></div>`
