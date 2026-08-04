@@ -14,6 +14,7 @@
   body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 48%,rgba(60,30,15,.35),transparent 70%),#060306;z-index:0;pointer-events:none}
   #c{position:fixed;inset:0;z-index:1;cursor:grab;display:block}
   html.dragging #c{cursor:grabbing}
+  #cfx-panel input[type=range],#cfx-panel input[type=checkbox]{accent-color:var(--accent)}
   /* top-left mark */
   .mark{position:fixed;top:26px;left:34px;z-index:10;pointer-events:none}
   .mark .zh{font-family:"Noto Serif SC",serif;font-weight:500;font-size:26px;letter-spacing:.18em;color:#fff}
@@ -81,6 +82,10 @@
   <button class="about-close" id="aboutClose" aria-label="关闭">×</button>
   <div class="about-inner" id="aboutInner"></div>
 </div>
+
+<!-- 光标特效(虚线准星 + 点击涟漪) —— 全站共用,主页也是这一份 -->
+<script>window.CURSOR_FX_OPTS={accent:[255,124,58]};</script>
+<script src="js/cursor-fx.js"></script>
 
 <script>
 // ── data: Notion 自媒体网络总表(经 tools.xiaoerai.xyz/api/me-network),写死兜底 ──
@@ -289,6 +294,13 @@ function buildGraph(root){
 function cross(a,b){return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];}
 function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
 
+// ── 星空转动手感(光标特效由 js/cursor-fx.js 负责,这两个参数搭它的调参面板) ──
+if(window.CursorFX) CursorFX.addParams({
+  inertia :{label:'拖拽惯性',min:0.80,max:0.98,step:0.005,value:0.98},   // 松手后滑多久 ← Jane 2026-08-04 拖定(拉满,要长滑行)
+  autoSpin:{label:'自转速度',min:0,max:0.0008,step:0.00001,value:0.00038} // ← Jane 拖定(比原来 0.00017 快一倍多)
+});
+const SPIN=(window.CursorFX&&CursorFX.ext)||{inertia:0.98,autoSpin:0.00038};
+
 // ── rotation + projection ──
 let yaw=0.3, pitch=-0.15, autoYaw=0;
 let zoom=1;
@@ -296,14 +308,25 @@ const lineMode=1; // 常态连线=灰色虚线(锁定)
 const HL_PALETTES={ blue:[74,164,255] }; // 悬停高亮=蓝(珊瑚橙互补色,锁定)
 const hlKey='blue';
 let dragging=false, lx=0, ly=0, moved=false;
-cv.addEventListener('mousedown',e=>{dragging=true;moved=false;lx=e.clientX;ly=e.clientY;document.documentElement.classList.add('dragging');});
-window.addEventListener('mouseup',()=>{dragging=false;document.documentElement.classList.remove('dragging');});
+let vYaw=0, vPitch=0;                    // 拖拽甩出去的角速度 —— 松手后继续滑行
+cv.addEventListener('mousedown',e=>{
+  dragging=true;moved=false;lx=e.clientX;ly=e.clientY;
+  vYaw=0;vPitch=0;                        // 手按住 = 抓停,别跟惯性打架
+  document.documentElement.classList.add('dragging');
+});
+window.addEventListener('mouseup',()=>{
+  dragging=false;
+  vYaw*=0.55; vPitch*=0.55; // 只带走一半手速 —— 否则松手后滑出去比拖的还远
+  document.documentElement.classList.remove('dragging');
+});
 window.addEventListener('mousemove',e=>{
   mx=e.clientX;my=e.clientY;
   if(!dragging)return;
   const dx=e.clientX-lx, dy=e.clientY-ly;
-  if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
-  yaw+=dx*0.006; pitch=Math.max(-1.2,Math.min(1.2,pitch+dy*0.005));
+  if(Math.abs(dx)+Math.abs(dy)>3) moved=true;
+  const ay=dx*0.006, ap=dy*0.005;
+  yaw+=ay; pitch=Math.max(-1.2,Math.min(1.2,pitch+ap));
+  vYaw=vYaw*0.6+ay*0.4; vPitch=vPitch*0.6+ap*0.4;  // 平滑取最近的手速
   lx=e.clientX;ly=e.clientY;
 });
 window.addEventListener('wheel',e=>{
@@ -331,10 +354,20 @@ cv.addEventListener('click',()=>{
   if(hover && hover.kind==='center') openAbout();
   else if(hover && hover.url) window.open(hover.url,'_blank','noopener');
 });
+// 压到星点上时,让光标环吸到那颗星上并收紧(环随透视近大远小)
+if(window.CursorFX) CursorFX.snap=()=>{
+  if(!hover||!hover._p) return null;
+  const p=hover._p;
+  return { x:p.sx, y:p.sy, r:hover.r*(0.35+0.7*p.persp)*zoom*1.35 + 11 };
+};
 
 // ── render loop ──
 function frame(){
-  autoYaw += dragging?0:0.00017;
+  autoYaw += dragging?0:SPIN.autoSpin;
+  if(!dragging && (Math.abs(vYaw)>1e-5 || Math.abs(vPitch)>1e-5)){ // 松手后的滑行
+    yaw+=vYaw; pitch=Math.max(-1.2,Math.min(1.2,pitch+vPitch));
+    vYaw*=SPIN.inertia; vPitch*=SPIN.inertia;
+  }
   ctx.clearRect(0,0,W,H);
   // deep background starfield (behind everything)
   const now=performance.now()*0.001;
@@ -357,7 +390,7 @@ function frame(){
     if(dd<hitR && dd<best){best=dd;hover=NODES[i];hover._p=p;}
   }
   updateInfo(hover);
-  if(!dragging) cv.style.cursor = hover ? 'pointer' : 'grab';
+  if(!dragging) cv.style.cursor = hover ? 'pointer' : 'grab'; // 开了准星光标时会被 cfx-on 盖成 none
   // 悬停时:直连的邻居节点集合 —— 用金黄色高亮,让"当前选中的这一串"从旋转背景里跳出来
   const nbr=new Set();
   if(hover){ for(const L of LINKS){ if(L[0]===hover)nbr.add(L[1]); else if(L[1]===hover)nbr.add(L[0]); } }
@@ -473,7 +506,6 @@ function frame(){
       }
     }
   }
-  // center intro (bottom center) when hovering center or idle
   requestAnimationFrame(frame);
 }
 
