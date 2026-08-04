@@ -50,10 +50,11 @@
   /* ─── Top mark ─── */
   nav {
     position: fixed; top: 0; left: 0; right: 0;
-    display: flex; justify-content: space-between; align-items: center;
+    display: flex; justify-content: space-between; align-items: flex-start;
     padding: 22px 36px;
     z-index: 10; pointer-events: none;
   }
+  nav .brand { display: flex; flex-direction: column; gap: 8px; }
   nav .mark {
     font-family: "Noto Serif SC", "Cormorant Garamond", serif;
     font-weight: 300;
@@ -61,6 +62,20 @@
     letter-spacing: 0.20em;
     color: rgba(255,255,255,0.55);
   }
+  /* 访客统计 —— 低调，落在标题正下方(对齐中文起始处) */
+  nav .visitors {
+    padding-left: 30px;
+    font-family: "Noto Serif SC", serif;
+    font-weight: 300;
+    font-size: 10px;
+    letter-spacing: 0.30em;
+    color: rgba(255,255,255,0.26);
+    opacity: 0;
+    transition: opacity 1.4s ease;
+    user-select: none;
+  }
+  nav .visitors.show { opacity: 1; }
+  nav .visitors #visitCount { color: rgba(255,255,255,0.42); }
   nav .mark .ear {
     margin-right: 10px;
     opacity: 0.75;
@@ -278,7 +293,10 @@
 <canvas id="c"></canvas>
 
 <nav>
-  <div class="mark"><span class="ear">👂</span>小耳的馆藏</div>
+  <div class="brand">
+    <div class="mark"><span class="ear">👂</span>小耳的馆藏</div>
+    <div class="visitors" id="visitors">访客&nbsp;·&nbsp;<span id="visitCount">—</span></div>
+  </div>
   <a class="meta about" href="me.html"><span class="z">关于小耳</span>&nbsp;·&nbsp;About&nbsp;Me</a>
 </nav>
 
@@ -307,6 +325,10 @@
   <div><span class="key">Enter</span> enter room</div>
   <div><span class="key">Esc</span> back to nebula</div>
 </div>
+
+<!-- 光标特效(虚线准星 + 点击涟漪) —— 和 /me 星图页共用同一份 -->
+<script>window.CURSOR_FX_OPTS={accent:[255,155,82],hotSel:'a,button,.dock-btn'};</script>
+<script src="js/cursor-fx.js"></script>
 
 <script type="importmap">
 {
@@ -659,7 +681,7 @@ function paintRoom(idx) {
   labelEl.querySelector('.en').textContent  = r.en;
   confirmEl.style.setProperty('--accent', hex);
   confirmEl.style.setProperty('--accent-glow', glow);
-  confirmEl.textContent = `进入 ${r.zh}`;
+  confirmEl.textContent = `Enter ${r.zh}`;
   dockBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
 }
 
@@ -830,6 +852,25 @@ function animate() {
   requestAnimationFrame(animate);
 }
 animate();
+</script>
+
+<script>
+/* 访客统计（低调）—— abacus 计数：新访客 +1(localStorage 去重，同一浏览器只计一次)，
+   老访客只读不加；请求失败则静默不显示，绝不露出坏数据 */
+(function(){
+  var NS='xiaoercamera-xyz', KEY='visits', BASE='https://abacus.jasoncameron.dev/';
+  var seen=false; try{ seen=localStorage.getItem('xe_visited')==='1'; }catch(e){}
+  fetch(BASE+(seen?'get':'hit')+'/'+NS+'/'+KEY)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d || typeof d.value!=='number') return;
+      if(!seen){ try{ localStorage.setItem('xe_visited','1'); }catch(e){} }
+      var num=document.getElementById('visitCount'), box=document.getElementById('visitors');
+      if(num) num.textContent=d.value.toLocaleString();
+      if(box) box.classList.add('show');
+    })
+    .catch(function(){ /* 静默隐藏 */ });
+})();
 </script>
 
 </body>
