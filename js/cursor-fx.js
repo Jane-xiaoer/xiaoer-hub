@@ -15,12 +15,12 @@
 
   const O = {
     cursor: 1,          // 虚线准星光标
-    ringR: 22,          // 环半径
-    ringA: 0.31,        // 环亮度(常态；压到东西上会自动提亮)  ← Jane 2026-08-04 拖定
+    ringR: 18,          // 环半径                              ← Jane 2026-08-04 拖定
+    ringA: 0.53,        // 环亮度(常态；压到东西上会自动提亮)  ← Jane 拖定
     ease: 0.53,         // 跟随阻尼：小=拖尾更黏，1=硬跟随      ← Jane 拖定
     spin: 0.4,          // 虚线环自转(圈/秒)                    ← Jane 拖定
     trail: 1,           // 鼠标移动时身后的虚线拖尾
-    trailT: 620,        // 拖尾留多久 ms(停下就自己散掉)
+    trailT: 1190,       // 拖尾留多久 ms(停下就自己散掉)        ← Jane 拖定
     readout: 1,         // 坐标读数 + 事件编号
     ripple: 1,          // 点击涟漪
     rippleR: 280,       // 涟漪最大半径
@@ -106,7 +106,7 @@
     // 每一小段都硬性截断到 DASH 长度 —— 鼠标甩得再快也不会把两个远点连成长线拉出斜网纹。
     if (O.trail && TRAIL.length) {
       TRAIL = TRAIL.filter(p => now - p.t < O.trailT);
-      if (TRAIL.length > 48) TRAIL = TRAIL.slice(-48);
+      if (TRAIL.length > 150) TRAIL = TRAIL.slice(-150); // 上限要留够,否则 trailT 调长了也被这里截短
       const DASH = 7;
       ctx.save(); ctx.setLineDash([]); ctx.lineWidth = 0.9; ctx.lineCap = 'round';
       for (let i = 1; i < TRAIL.length; i++) {
