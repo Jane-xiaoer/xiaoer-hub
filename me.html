@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>关于小耳 · 星座图</title>
 <meta name="description" content="关于小耳 — 一张可旋转的星座图，我的作品 / 馆藏 / 社媒 / 联系都在其中。"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
@@ -10,9 +10,10 @@
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{--accent:#ff7c3a;--accent-soft:rgba(255,124,58,.5);--dim:rgba(255,255,255,.5)}
-  html,body{height:100%;overflow:hidden;background:#000;color:#fff;font-family:"Cutive Mono",monospace;user-select:none;-webkit-font-smoothing:antialiased}
+  html,body{height:100%;overflow:hidden;background:#000;color:#fff;font-family:"Cutive Mono",monospace;user-select:none;-webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
   body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 48%,rgba(60,30,15,.35),transparent 70%),#060306;z-index:0;pointer-events:none}
-  #c{position:fixed;inset:0;z-index:1;cursor:grab;display:block}
+  #c{position:fixed;inset:0;z-index:1;cursor:grab;display:block;touch-action:none}
   html.dragging #c{cursor:grabbing}
   #cfx-panel input[type=range],#cfx-panel input[type=checkbox]{accent-color:var(--accent)}
   /* top-left mark */
@@ -36,6 +37,7 @@
   .infocard{position:fixed;right:34px;bottom:96px;z-index:12;max-width:340px;text-align:right;
     opacity:0;transform:translateY(8px);transition:opacity .3s ease,transform .3s ease;pointer-events:none;font-family:"Cutive Mono",monospace}
   .infocard.show{opacity:1;transform:none}
+  .infocard .cardbox{display:inline-block;text-align:right}
   .infocard .t{font-family:"Noto Serif SC",serif;font-weight:500;font-size:18px;color:#fff;letter-spacing:.06em}
   .infocard .t .en{font-family:"Cutive Mono",monospace;font-size:9px;letter-spacing:.28em;color:var(--dim);margin-left:8px}
   .infocard .d{font-size:12px;line-height:1.85;color:rgba(255,255,255,.6);margin-top:9px}
@@ -60,18 +62,65 @@
   .about-sec p{font-family:"Noto Serif SC",serif;font-weight:300;font-size:15px;line-height:2;color:rgba(255,255,255,.72)}
   .about-sec p.en{font-family:"Cormorant Garamond",serif;font-size:17px;line-height:1.75;color:rgba(255,255,255,.46);margin-top:10px}
   .about-inner .foot{margin-top:40px;font-family:"Cutive Mono",monospace;font-size:10px;letter-spacing:.3em;color:rgba(255,255,255,.35);text-transform:uppercase}
+
+  /* ── 触屏 / 小屏 ── 桌面提示换成手势提示 */
+  .side-hint.touch{display:none}
+  @media (hover:none),(max-width:760px),(max-height:520px){
+    .side-hint.mouse{display:none}
+    .side-hint.touch{display:block}
+  }
+  @media (max-width:760px),(max-height:520px){   /* max-height 兜住横屏手机 */
+    .mark{top:calc(14px + env(safe-area-inset-top));left:calc(16px + env(safe-area-inset-left))}
+    .mark .zh{font-size:19px;letter-spacing:.14em}
+    .mark .en{font-size:8px;letter-spacing:.3em;margin-top:5px}
+    .back{top:calc(14px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));
+      font-size:9px;letter-spacing:.16em;padding:8px 12px}
+    .back .en-tail{display:none}   /* 小屏只留「← 回馆藏」,别占掉半条顶栏 */
+    .hud{display:none}
+    /* 手势提示：贴底居中一行 */
+    .side-hint.touch{right:auto;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));
+      text-align:center;font-size:8px;letter-spacing:.18em;line-height:1.9;white-space:nowrap;transition:opacity .35s}
+    body.picked .side-hint.touch{opacity:0}
+    .side-hint .key{padding:2px 5px;margin:0 2px}
+    /* hover 卡片 → 贴底信息条，可点开 */
+    .infocard{left:calc(18px + env(safe-area-inset-left));right:calc(18px + env(safe-area-inset-right));
+      bottom:calc(48px + env(safe-area-inset-bottom));max-width:none}
+    /* 只有卡片实体接管触摸：整条 fixed 容器若可点，会白白吃掉底部一整条星空 */
+    .infocard.show .cardbox{pointer-events:auto;
+      background:linear-gradient(to left,rgba(10,5,10,.86),rgba(10,5,10,.55));
+      padding:11px 13px;border-radius:10px;max-width:100%}
+    .infocard .t{font-size:16px}
+    .infocard .d{font-size:11px;line-height:1.7;margin-top:6px;word-break:break-all;
+      display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .infocard .d.en{display:none}   /* 底部信息条要短 —— 英文留给详细浮层 */
+    .infocard .go{font-size:8.5px;letter-spacing:.2em;margin-top:8px}
+    /* 详细介绍浮层 */
+    .about-close{top:calc(14px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));width:38px;height:38px;font-size:20px}
+    .about-inner{padding:calc(76px + env(safe-area-inset-top)) 22px calc(64px + env(safe-area-inset-bottom))}
+    .about-inner .eyebrow{font-size:9px;letter-spacing:.32em}
+    .about-inner h1{font-size:30px;letter-spacing:.1em;margin:12px 0 6px}
+    .about-inner .idw{font-size:16px}
+    .about-inner .lead{font-size:15px;line-height:1.95;margin:22px 0 4px}
+    .about-inner .lead-en{font-size:16px;line-height:1.7;margin-top:10px}
+    .about-sec{margin-top:26px;padding-top:20px}
+    .about-sec p{font-size:14px;line-height:1.95}
+    .about-sec p.en{font-size:15px;line-height:1.7}
+  }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="mark"><div class="zh">关于小耳</div><div class="en">Xiaoer&nbsp;·&nbsp;World Constellation</div></div>
-<a class="back" href="https://xiaoercamera.xyz/">← 回馆藏 · Collections</a>
+<a class="back" href="https://xiaoercamera.xyz/">← 回馆藏<span class="en-tail"> · Collections</span></a>
 <div class="hud">SPHERICAL PROJECTION · <b id="hudCount">—</b> NODES</div>
-<div class="side-hint">
+<div class="side-hint mouse">
   <div><span class="key">DRAG</span> rotate</div>
   <div><span class="key">SCROLL</span> zoom</div>
   <div><span class="key">HOVER</span> reveal</div>
   <div><span class="key">CLICK</span> open</div>
+</div>
+<div class="side-hint touch">
+  <span class="key">拖动</span> 旋转 &nbsp;·&nbsp; <span class="key">双指</span> 缩放 &nbsp;·&nbsp; <span class="key">轻点</span> 查看
 </div>
 
 <!-- hover 小卡片 -->
@@ -163,6 +212,10 @@ const AB_EN = {
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
 
+// 触屏(手机/平板):没有指针,交互模型换成「拖=转 / 双指=缩放 / 轻点=选中 · 再点=打开」
+const IS_TOUCH = (window.matchMedia && matchMedia('(hover:none)').matches) || ('ontouchstart' in window);
+const TS = IS_TOUCH ? 0.86 : 1;   // 小屏上字号收一档,免得标签盖住星点
+
 // hover 小卡片 + 详细介绍浮层
 const infocardEl = document.getElementById('infocard');
 const aboutOverlay = document.getElementById('aboutOverlay');
@@ -173,15 +226,16 @@ window.addEventListener('keydown',e=>{ if(e.key==='Escape') aboutOverlay.classLi
 let lastHover=undefined;
 function updateInfo(n){
   if(n===lastHover) return; lastHover=n;
+  document.body.classList.toggle('picked',!!n);   // 选中后把底部手势提示让开
   if(!n){ infocardEl.classList.remove('show'); return; }
   if(n.kind==='center'){
-    infocardEl.innerHTML=`<div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
+    infocardEl.innerHTML=`<div class="cardbox"><div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
       `<div class="d">${n.intro||''}</div>`+(n.introEn?`<div class="d en">${n.introEn}</div>`:'')+
-      `<div class="go">CLICK · ${n.action||'进一步认识'} · MEET XIAOER →</div>`;
+      `<div class="go">${IS_TOUCH?'轻点这里 · 认识小耳 →':`CLICK · ${n.action||'进一步认识'} · MEET XIAOER →`}</div></div>`;
   }else{
     const dom=n.url?n.url.replace(/^https?:\/\//,'').replace(/^mailto:/,'').replace(/\/$/,''):'';
-    infocardEl.innerHTML=`<div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
-      (dom?`<div class="d">${dom}</div>`:'')+(n.url?`<div class="go">CLICK · 前往 · OPEN →</div>`:'');
+    infocardEl.innerHTML=`<div class="cardbox"><div class="t">${n.label}<span class="en">${(n.en||'').toUpperCase()}</span></div>`+
+      (dom?`<div class="d">${dom}</div>`:'')+(n.url?`<div class="go">${IS_TOUCH?'轻点这里 · 打开 →':'CLICK · 前往 · OPEN →'}</div>`:'')+`</div>`;
   }
   infocardEl.classList.add('show');
 }
@@ -209,12 +263,18 @@ function openAbout(){
     `<div class="foot">· 内容随 Notion 更新 · Synced with Notion ·</div>`;
   aboutOverlay.scrollTop=0; aboutOverlay.classList.add('show');
 }
-let W, H, DPR;
+let W, H, DPR, FIT=1, RS=1;
+// 星图在世界坐标里最远的点(算上透视放大)大约铺到 ±430px。屏幕短边小于 860 就整体等比收进来,
+// 桌面(短边≥860)FIT 恒为 1 —— 已定稿的桌面观感一点不动。
 function resize(){
   DPR = Math.min(window.devicePixelRatio||1, 2);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = W*DPR; cv.height = H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
+  FIT = Math.max(0.42, Math.min(1, Math.min(W,H)/860));
+  // 星点半径基本等比跟着收(只留一点点余量) —— 收慢了光晕(4.1×R)就糊成棉花团盖住核心,
+  // 那是 Jane 明确否掉过的样子。点小了不怕点不中:触屏命中半径在 pickAt 里单独放宽到 26px
+  RS  = 0.1 + 0.9*FIT;
 }
 window.addEventListener('resize', resize); resize();
 
@@ -224,7 +284,7 @@ let NODES = [], LINKS = [];
 // ── deep background starfield (3D, rotates with the scene → 浩瀚星空) ──
 const BGSTARS = (function(){
   const a=[];
-  for(let i=0;i<820;i++){
+  for(let i=0;i<(IS_TOUCH?430:820);i++){   // 手机上砍一半 —— 每帧 820 次投影是小屏最大的一笔开销
     const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
     const R=520+Math.random()*1450;
     a.push({ x:R*Math.sin(ph)*Math.cos(th), y:R*Math.cos(ph), z:R*Math.sin(ph)*Math.sin(th),
@@ -336,6 +396,78 @@ window.addEventListener('wheel',e=>{
 },{passive:false});
 let mx=-9999,my=-9999; // 初始鼠标在屏外 —— 加载先是安静星空,移上去才高亮
 
+// ── 触屏输入 ── 手指没有 hover,所以改成「轻点选中(sticky) → 再点/点信息条打开」
+let sticky=null;      // 触屏上被选中的星点(代替 hover)
+if(IS_TOUCH){
+  const dist2=t=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+  let mode=0, pinch0=0, zoom0=1, t0=0, sx0=0, sy0=0;
+  cv.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    if(e.touches.length===1){
+      const t=e.touches[0];
+      mode=1; dragging=true; moved=false;
+      lx=sx0=t.clientX; ly=sy0=t.clientY; t0=performance.now();
+      vYaw=0; vPitch=0;                       // 手指按住 = 抓停
+    }else if(e.touches.length>=2){
+      mode=2; dragging=false; moved=true;      // 双指之后抬手不当轻点
+      pinch0=dist2(e.touches)||1; zoom0=zoom;
+    }
+  },{passive:false});
+  cv.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(mode===2 && e.touches.length>=2){
+      zoom=Math.max(.55,Math.min(2.4, zoom0*(dist2(e.touches)/pinch0)));
+      return;
+    }
+    if(mode!==1 || !e.touches.length) return;
+    const t=e.touches[0];
+    const dx=t.clientX-lx, dy=t.clientY-ly;
+    if(Math.abs(t.clientX-sx0)+Math.abs(t.clientY-sy0)>10) moved=true;  // 手指比鼠标抖,阈值放宽
+    const ay=dx*0.006, ap=dy*0.005;
+    yaw+=ay; pitch=Math.max(-1.2,Math.min(1.2,pitch+ap));
+    vYaw=vYaw*0.6+ay*0.4; vPitch=vPitch*0.6+ap*0.4;
+    lx=t.clientX; ly=t.clientY;
+  },{passive:false});
+  cv.addEventListener('touchend',e=>{
+    if(mode===1){
+      dragging=false;
+      vYaw*=0.55; vPitch*=0.55;               // 和鼠标同一套惯性手感
+      if(!moved && performance.now()-t0<600) tap(sx0,sy0);
+    }
+    if(e.touches.length===0) mode=0;
+    else if(e.touches.length===1){            // 双指松掉一根 → 接着单指转
+      mode=1; dragging=true; moved=true; lx=e.touches[0].clientX; ly=e.touches[0].clientY;
+    }
+  });
+  cv.addEventListener('touchcancel',()=>{ mode=0; dragging=false; });
+
+  // 轻点:第一下选中(出信息条),同一颗再点一下才打开 —— 免得转着转着误触跳走
+  function tap(x,y){
+    const n=pickAt(x,y);
+    if(!n){ sticky=null; return; }
+    if(n.kind==='center'){ if(sticky===n) openAbout(); else sticky=n; return; }
+    if(sticky===n && n.url) openLink(n);
+    else sticky=n;
+  }
+  // 信息条本身也能点开,比再点一次小星点稳
+  infocardEl.addEventListener('click',()=>{
+    if(!sticky) return;
+    if(sticky.kind==='center') openAbout(); else if(sticky.url) openLink(sticky);
+  });
+}
+function openLink(n){ window.open(n.url,'_blank','noopener'); }
+// 按屏幕坐标挑最近的星点(触屏用;指头粗,命中半径给大些)
+function pickAt(x,y){
+  let hit=null, best=1e9;
+  for(const n of NODES){
+    const p=project(n);
+    const d=Math.hypot(p.sx-x,p.sy-y);
+    const r=Math.max(26, n.r*p.scale+16);
+    if(d<r && d<best){ best=d; hit=n; hit._p=p; }
+  }
+  return hit;
+}
+
 function project(n){
   // rotate by yaw (around Y) then pitch (around X)
   const cy=Math.cos(yaw+autoYaw),sy=Math.sin(yaw+autoYaw);
@@ -343,14 +475,14 @@ function project(n){
   const cp=Math.cos(pitch),sp=Math.sin(pitch);
   let y2=y*cp - z*sp, z2=y*sp + z*cp;
   const persp=420/(420 + z2); // perspective
-  const s=persp*zoom;
+  const s=persp*zoom*FIT;
   return { sx:W/2 + x*s, sy:H/2 + y2*s, z:z2, scale:s, persp };
 }
 
 // ── interaction: hover nearest projected node ──
 let hover=null;
 cv.addEventListener('click',()=>{
-  if(moved)return;
+  if(IS_TOUCH||moved)return;   // 触屏走上面的 tap(),别让合成 click 再触发一次
   if(hover && hover.kind==='center') openAbout();
   else if(hover && hover.url) window.open(hover.url,'_blank','noopener');
 });
@@ -363,6 +495,8 @@ if(window.CursorFX) CursorFX.snap=()=>{
 
 // ── render loop ──
 function frame(){
+  // 详细介绍浮层盖满屏时星图看不见 —— 停画,别让手机白烧电发烫(状态原地冻住,关掉接着转)
+  if(aboutOverlay.classList.contains('show')){ requestAnimationFrame(frame); return; }
   autoYaw += dragging?0:SPIN.autoSpin;
   if(!dragging && (Math.abs(vYaw)>1e-5 || Math.abs(vPitch)>1e-5)){ // 松手后的滑行
     yaw+=vYaw; pitch=Math.max(-1.2,Math.min(1.2,pitch+vPitch));
@@ -382,15 +516,19 @@ function frame(){
   }
   // compute projections
   const P = NODES.map(project);
-  // hover pick (nearest within radius)
+  // hover pick (nearest within radius)。触屏没有指针 —— 直接认轻点选中的那颗
   hover=null; let best=1e9;
-  for(let i=0;i<NODES.length;i++){
-    const p=P[i]; const dd=Math.hypot(p.sx-mx,p.sy-my);
-    const hitR = Math.max(14, NODES[i].r*p.scale+10);
-    if(dd<hitR && dd<best){best=dd;hover=NODES[i];hover._p=p;}
+  if(IS_TOUCH){
+    if(sticky){ const si=NODES.indexOf(sticky); if(si>=0){ hover=sticky; hover._p=P[si]; } else sticky=null; }
+  }else{
+    for(let i=0;i<NODES.length;i++){
+      const p=P[i]; const dd=Math.hypot(p.sx-mx,p.sy-my);
+      const hitR = Math.max(14, NODES[i].r*p.scale+10);
+      if(dd<hitR && dd<best){best=dd;hover=NODES[i];hover._p=p;}
+    }
   }
   updateInfo(hover);
-  if(!dragging) cv.style.cursor = hover ? 'pointer' : 'grab'; // 开了准星光标时会被 cfx-on 盖成 none
+  if(!IS_TOUCH && !dragging) cv.style.cursor = hover ? 'pointer' : 'grab'; // 开了准星光标时会被 cfx-on 盖成 none
   // 悬停时:直连的邻居节点集合 —— 用金黄色高亮,让"当前选中的这一串"从旋转背景里跳出来
   const nbr=new Set();
   if(hover){ for(const L of LINKS){ if(L[0]===hover)nbr.add(L[1]); else if(L[1]===hover)nbr.add(L[0]); } }
@@ -430,7 +568,7 @@ function frame(){
     const gold = !coral && nbr.has(n); // 邻居高亮(蓝/黄)
     const hlc = HL_PALETTES[hlKey];
     // 近大远小 —— 放开透视,让近处的点明显大于远处(Jane 觉得这样更舒服);邻居略放大
-    const R=n.r*(0.35+0.7*p.persp)*zoom*(isHover?1.35:(gold?1.18:1));
+    const R=n.r*(0.35+0.7*p.persp)*zoom*RS*(isHover?1.35:(gold?1.18:1));
     // glow —— 光晕更大更饱满,让星点自身发光、压过连线(浩瀚星空感)
     // 光晕收紧成一圈 halo,让亮白核心清晰凸出(像 Jane 要的第二张:亮点 + 光环,而非糊团)
     const glowR = R*(n.kind==='center'?4.3:4.1);
@@ -471,26 +609,27 @@ function frame(){
       ctx.textAlign='left';
     }
     // labels: center always; cats always; leaves when hover or near-front
+    // 小屏上叶子标签更挑一点(只留最靠前的),否则字会糊成一片
     const showLabel = n.kind==='center'||n.kind==='cat'||n.kind==='subhub'||n.current || isHover || gold
-      || (n.kind==='leaf'&&p.persp>0.82) || (n.kind==='sub'&&(isHover||p.persp>0.92));
+      || (n.kind==='leaf'&&p.persp>(IS_TOUCH?1.18:0.82)) || (n.kind==='sub'&&(isHover||p.persp>(IS_TOUCH?1.45:0.92)));
     if(n.kind==='center'){
       // 中心小耳：小耳 / XIAOER / 三个身份 叠成一栈
       ctx.textAlign='left'; ctx.textBaseline='middle';
-      const ox=R+12;
-      ctx.font=`500 18px "Noto Serif SC","Cutive Mono",monospace`;
+      const ox=R+12*TS;
+      ctx.font=`500 ${18*TS}px "Noto Serif SC","Cutive Mono",monospace`;
       ctx.fillStyle='rgba(255,150,90,1)';
-      ctx.fillText(n.label, p.sx+ox, p.sy-24);
-      ctx.font='10px "Cutive Mono",monospace';
+      ctx.fillText(n.label, p.sx+ox, p.sy-24*TS);
+      ctx.font=`${10*TS}px "Cutive Mono",monospace`;
       ctx.fillStyle='rgba(255,255,255,.45)';
-      ctx.fillText((n.en||'').toUpperCase(), p.sx+ox, p.sy-8);
+      ctx.fillText((n.en||'').toUpperCase(), p.sx+ox, p.sy-8*TS);
       const roles=(n.sub||'').split(/[×·・]/).map(s=>s.trim()).filter(Boolean).slice(0,3);
-      ctx.font='9px "Cutive Mono",monospace';
+      ctx.font=`${9*TS}px "Cutive Mono",monospace`;
       roles.forEach((rl,ri)=>{
         ctx.fillStyle='rgba(255,150,90,.6)';
-        ctx.fillText(rl, p.sx+ox, p.sy+9+ri*13);
+        ctx.fillText(rl, p.sx+ox, p.sy+9*TS+ri*13*TS);
       });
     }else if(showLabel){
-      const fs = (n.kind==='cat'?13:(n.kind==='subhub'?12:(n.kind==='sub'?10:11)));
+      const fs = (n.kind==='cat'?13:(n.kind==='subhub'?12:(n.kind==='sub'?10:11)))*TS;
       const la = (isHover||gold?1:0.5*depth+0.2);
       ctx.textAlign='left'; ctx.textBaseline='middle';
       const ox=R+10;
@@ -509,16 +648,17 @@ function frame(){
   requestAnimationFrame(frame);
 }
 
-// ── boot: fetch Notion, fallback ──
-(async function(){
-  let data=FALLBACK;
-  try{
-    const r=await fetch(API,{cache:'no-store'});
-    if(r.ok){ const j=await r.json(); if(j && (j.children||j.nodes)) data=j; }
-  }catch(e){}
-  buildGraph(data);
-  document.getElementById('hudCount').textContent=NODES.length;
-  frame();
+// ── boot: 先用兜底立刻起画面,Notion 数据回来了再热替换 ──
+// (API 冷启要 2~6 秒。原来在这儿干等 → 手机弱网上就是好几秒全黑屏)
+(function(){
+  const setCount=()=>document.getElementById('hudCount').textContent=NODES.length;
+  buildGraph(FALLBACK); setCount(); frame();
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),8000);
+  fetch(API,{cache:'no-store',signal:ctl.signal})
+    .then(r=>r.ok?r.json():null)
+    .then(j=>{ if(j && (j.children||j.nodes)){ buildGraph(j); setCount(); } })  // NODES 每帧现读,换了就跟着变
+    .catch(()=>{})
+    .finally(()=>clearTimeout(to));
 })();
 </script>
 </body>
