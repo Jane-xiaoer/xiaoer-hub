@@ -11,7 +11,8 @@
  * 调参面板：localhost 或网址带 ?fx=1 时出现，按 D 收起/展开。线上默认不出现。
  */
 (function () {
-  if (window.matchMedia && window.matchMedia('(hover:none)').matches) return; // 触屏没有光标，不装
+  // 触屏没有光标，但有手指 —— 手指就是光标：按下环落在指尖，移动带拖尾，抬起淡出，涟漪照常
+  const TOUCH = !!(window.matchMedia && window.matchMedia('(hover:none)').matches);
 
   const O = {
     cursor: 1,          // 虚线准星光标
@@ -31,6 +32,10 @@
     hotSel: 'a,button,[data-fx-hot]' // 悬停这些 DOM 元素时环会变色收紧
   };
   Object.assign(O, window.CURSOR_FX_OPTS || {});
+  if (TOUCH) {
+    O.ringR *= 1.55;      // 指尖比箭头粗得多,环得大一圈才从手指底下露出来
+    O.rippleR *= 0.55;    // 280 是照 1440 宽的屏定的,手机上会糊满整屏
+  }
 
   const CFX = window.CursorFX = { opts: O, snap: null, ext: {}, _extDefs: {} };
   CFX.addParams = function (defs) {
@@ -60,6 +65,12 @@
     + 'background:rgba(10,6,10,.84);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.13);border-radius:8px;'
     + 'font-family:"Cutive Mono",ui-monospace,monospace;font-size:10px;color:rgba(255,255,255,.62);letter-spacing:.04em}'
     + '#cfx-panel.hide{display:none}'
+    // 手机上没键盘按不了 D —— 收成一颗 FX 小钮，点一下再展开
+    + '#cfx-panel .x{position:absolute;top:7px;right:9px;width:22px;height:22px;line-height:20px;text-align:center;'
+    + 'border:1px solid rgba(255,255,255,.22);border-radius:50%;cursor:pointer;font-size:13px}'
+    + '#cfx-panel.mini{width:40px;height:40px;padding:0;border-radius:50%;overflow:hidden;cursor:pointer}'
+    + '#cfx-panel.mini>*{display:none}'
+    + '#cfx-panel.mini::after{content:"FX";display:block;line-height:38px;text-align:center;font-size:9px;letter-spacing:.1em}'
     + '#cfx-panel h4{font-size:9px;letter-spacing:.3em;text-transform:uppercase;font-weight:400;margin:0 0 10px}'
     + '#cfx-panel .row{display:flex;justify-content:space-between;margin-bottom:2px}'
     + '#cfx-panel .row span{color:rgba(255,255,255,.78)}'
@@ -71,11 +82,15 @@
     + 'border-radius:4px;cursor:pointer;text-transform:uppercase}';
 
   // ── 状态 ──
-  let mx = -9999, my = -9999;              // 真实鼠标
+  let mx = -9999, my = -9999;              // 真实鼠标 / 手指
   const cur = { x: -9999, y: -9999, r: O.ringR }; // 环(带阻尼，落后一点)
   let hotEl = null;                        // 鼠标下的可交互 DOM
   let TRAIL = [];                          // 移动轨迹(拖尾)
   let RIPPLES = [], evtNo = 0, live = null, downX = 0, downY = 0;
+  let vis = TOUCH ? 0 : 1;                 // 环的整体可见度(触屏抬手后淡出;桌面恒 1)
+  let fadeT0 = 0, running = false;
+  // 触屏上没人碰屏时一帧都不画 —— 手机上这层 overlay 白转 rAF 是纯耗电
+  function kick() { if (!running) { running = true; requestAnimationFrame(draw); } }
 
   addEventListener('mousemove', e => {
     mx = e.clientX; my = e.clientY;
@@ -85,6 +100,7 @@
     const t = e.target;
     hotEl = (t && t.closest) ? t.closest(O.hotSel) : null;
     if (live && Math.abs(mx - downX) + Math.abs(my - downY) > 3) live.dead = true; // 变成拖拽了，涟漪收掉
+    kick();
   }, { passive: true });
   addEventListener('mouseout', e => { if (!e.relatedTarget) { mx = my = -9999; } });
 
@@ -93,14 +109,43 @@
     downX = e.clientX; downY = e.clientY;
     live = { x: e.clientX, y: e.clientY, t0: performance.now(), no: ++evtNo, dead: false };
     RIPPLES.push(live);
+    kick();
   }, true);
   addEventListener('pointerup', () => { live = null; }, true);
+
+  // ── 触屏：手指驱动同一套环/拖尾/涟漪 ──
+  if (TOUCH) {
+    const put = (t, first) => {
+      mx = t.clientX; my = t.clientY;
+      if (first) { cur.x = mx; cur.y = my; cur.r = O.ringR; } // 别从上一次的落点飞过来
+      const last = TRAIL[TRAIL.length - 1];
+      if (!last || Math.hypot(mx - last.x, my - last.y) > 5) TRAIL.push({ x: mx, y: my, t: performance.now() });
+    };
+    addEventListener('touchstart', e => {
+      const t = e.touches[0]; if (!t) return;
+      vis = 1; fadeT0 = 0;
+      put(t, true);
+      hotEl = (e.target && e.target.closest) ? e.target.closest(O.hotSel) : null;
+      kick();
+    }, { passive: true, capture: true });
+    addEventListener('touchmove', e => {
+      const t = e.touches[0]; if (!t) return;
+      put(t, false);
+      if (live && Math.abs(mx - downX) + Math.abs(my - downY) > 3) live.dead = true;
+      kick();
+    }, { passive: true, capture: true });
+    const lift = () => { fadeT0 = performance.now(); hotEl = null; kick(); };
+    addEventListener('touchend', e => { if (!e.touches.length) lift(); }, { passive: true, capture: true });
+    addEventListener('touchcancel', lift, { passive: true, capture: true });
+  }
 
   // ── 画 ──
   function draw() {
     ctx.clearRect(0, 0, W, H);
     const now = performance.now();
-    document.documentElement.classList.toggle('cfx-on', !!O.cursor);
+    if (!TOUCH) document.documentElement.classList.toggle('cfx-on', !!O.cursor); // 触屏没有系统箭头要藏
+    // 抬手后环淡出(涟漪和拖尾各自按自己的节奏放完,不受影响)
+    if (TOUCH && fadeT0) { vis = Math.max(0, 1 - (now - fadeT0) / 460); if (vis <= 0) mx = my = -9999; }
 
     // 移动拖尾：身后拖一串一条一条的短虚线，按年龄淡出；停下来 trailT 内自己散干净。
     // 每一小段都硬性截断到 DASH 长度 —— 鼠标甩得再快也不会把两个远点连成长线拉出斜网纹。
@@ -168,6 +213,7 @@
 
     // 光标环
     if (O.cursor && mx > -1000) {
+      ctx.save(); ctx.globalAlpha = vis;   // 触屏抬手后整环淡出
       // 吸附目标：先问页面(星图节点)，再看鼠标底下的按钮/链接
       let snap = null;
       try { snap = CFX.snap && CFX.snap(); } catch (err) { snap = null; }
@@ -211,9 +257,14 @@
         ctx.font = '9px "Cutive Mono",ui-monospace,monospace';
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillStyle = `rgba(${col},${hot ? 0.6 : 0.34})`;
-        ctx.fillText(Math.round(mx) + ' · ' + Math.round(my), mx + cur.r + 16, my + cur.r * 0.55);
+        // 触屏上读数挪到指尖斜上方 —— 原来那个位置正好被手指压着
+        ctx.fillText(Math.round(mx) + ' · ' + Math.round(my),
+          mx + cur.r * 0.7 + 10, TOUCH ? my - cur.r - 12 : my + cur.r * 0.55);
       }
+      ctx.restore();
     }
+    // 触屏：环淡完、拖尾散净、涟漪放完 → 停帧,等下次碰屏再启动
+    if (TOUCH && vis <= 0.01 && !TRAIL.length && !RIPPLES.length) { running = false; return; }
     requestAnimationFrame(draw);
   }
 
@@ -232,11 +283,13 @@
   }
   function buildPanel() {
     const ex = Object.keys(CFX._extDefs);
-    panel.innerHTML = '<h4 style="color:rgb(' + O.accent + ')">Cursor FX · 调参</h4>'
+    panel.innerHTML = '<div class="x" id="cfxMin">–</div>'
+      + '<h4 style="color:rgb(' + O.accent + ')">Cursor FX · 调参</h4>'
       + TOGGLES.map(([k, n]) => `<label><input type="checkbox" data-k="${k}" ${O[k] ? 'checked' : ''}>${n}</label>`).join('')
       + '<hr>' + SLIDERS.map(([k, n, a, b, s]) => row(k, n, a, b, s, O[k])).join('')
       + (ex.length ? '<hr>' + ex.map(k => { const d = CFX._extDefs[k]; return row('ext:' + k, d.label, d.min, d.max, d.step, CFX.ext[k]); }).join('') : '')
       + '<button id="cfxCopy">复制当前参数</button>';
+    panel.querySelector('#cfxMin').onclick = e => { e.stopPropagation(); panel.classList.add('mini'); };
     panel.querySelector('#cfxCopy').onclick = () => {
       navigator.clipboard.writeText(JSON.stringify({ opts: O, ext: CFX.ext }, null, 2));
       const b = panel.querySelector('#cfxCopy');
@@ -252,6 +305,8 @@
       if (k.startsWith('ext:')) CFX.ext[k.slice(4)] = v; else O[k] = v;
       const s = panel.querySelector('#cfxv_' + CSS.escape(k)); if (s) s.textContent = v;
     });
+    if (TOUCH) { panel.style.maxHeight = '58vh'; panel.style.overflowY = 'auto'; panel.classList.add('mini'); }
+    panel.addEventListener('click', () => { if (panel.classList.contains('mini')) panel.classList.remove('mini'); });
     document.body.appendChild(panel);
     buildPanel();
     addEventListener('keydown', e => {
@@ -264,8 +319,10 @@
     document.body.appendChild(cv);
     resize();
     const local = /^(localhost|127\.|192\.168\.|0\.0\.0\.0)/.test(location.hostname) || location.protocol === 'file:';
-    if (local || /[?&]fx=1/.test(location.search)) initPanel();
-    requestAnimationFrame(draw);
+    // 触屏上不因 localhost/局域网 IP 自动弹面板 —— 206px 宽的面板在手机上盖掉半个屏幕，
+    // 而且底下的东西全点不到。手机上想调参，显式加 ?fx=1
+    if ((local && !TOUCH) || /[?&]fx=1/.test(location.search)) initPanel();
+    kick();
   }
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot); else boot();
 })();
