@@ -220,9 +220,14 @@ const TS = IS_TOUCH ? 0.86 : 1;   // 小屏上字号收一档,免得标签盖住
 const infocardEl = document.getElementById('infocard');
 const aboutOverlay = document.getElementById('aboutOverlay');
 const aboutInner = document.getElementById('aboutInner');
-document.getElementById('aboutClose').addEventListener('click',()=>aboutOverlay.classList.remove('show'));
-aboutOverlay.addEventListener('click',e=>{ if(e.target===aboutOverlay) aboutOverlay.classList.remove('show'); });
-window.addEventListener('keydown',e=>{ if(e.key==='Escape') aboutOverlay.classList.remove('show'); });
+function setAbout(on){
+  aboutOverlay.classList.toggle('show',on);
+  // 触屏:读文字时别在字上拖一串虚线(桌面不动 —— 桌面藏了系统箭头,关掉光标就真没光标了)
+  if(IS_TOUCH && window.CursorFX) CursorFX.opts.trail = on?0:1;
+}
+document.getElementById('aboutClose').addEventListener('click',()=>setAbout(false));
+aboutOverlay.addEventListener('click',e=>{ if(e.target===aboutOverlay) setAbout(false); });
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') setAbout(false); });
 let lastHover=undefined;
 function updateInfo(n){
   if(n===lastHover) return; lastHover=n;
@@ -261,7 +266,7 @@ function openAbout(){
     sec('lanba','懒坝美术馆','Lanba Art Museum')+
     sec('ai','产品与系统','AI · Products & Systems')+
     `<div class="foot">· 内容随 Notion 更新 · Synced with Notion ·</div>`;
-  aboutOverlay.scrollTop=0; aboutOverlay.classList.add('show');
+  aboutOverlay.scrollTop=0; setAbout(true);
 }
 let W, H, DPR, FIT=1, RS=1;
 // 星图在世界坐标里最远的点(算上透视放大)大约铺到 ±430px。屏幕短边小于 860 就整体等比收进来,
@@ -400,7 +405,7 @@ let mx=-9999,my=-9999; // 初始鼠标在屏外 —— 加载先是安静星空,
 let sticky=null;      // 触屏上被选中的星点(代替 hover)
 if(IS_TOUCH){
   const dist2=t=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
-  let mode=0, pinch0=0, zoom0=1, t0=0, sx0=0, sy0=0;
+  let mode=0, pinch0=0, zoom0=1, t0=0, sx0=0, sy0=0, pressed=null, prevSticky=null;
   cv.addEventListener('touchstart',e=>{
     e.preventDefault();
     if(e.touches.length===1){
@@ -408,6 +413,9 @@ if(IS_TOUCH){
       mode=1; dragging=true; moved=false;
       lx=sx0=t.clientX; ly=sy0=t.clientY; t0=performance.now();
       vYaw=0; vPitch=0;                       // 手指按住 = 抓停
+      // 按下的当下就高亮 —— 和桌面鼠标划上去同一套反馈:珊瑚核心+十字准星、邻居连线转蓝、
+      // 右下信息条浮出、光标环吸到这颗星上收紧变色。等抬手再高亮就什么都看不到了
+      prevSticky=sticky; pressed=pickAt(sx0,sy0); sticky=pressed;
     }else if(e.touches.length>=2){
       mode=2; dragging=false; moved=true;      // 双指之后抬手不当轻点
       pinch0=dist2(e.touches)||1; zoom0=zoom;
@@ -432,7 +440,11 @@ if(IS_TOUCH){
     if(mode===1){
       dragging=false;
       vYaw*=0.55; vPitch*=0.55;               // 和鼠标同一套惯性手感
-      if(!moved && performance.now()-t0<600) tap(sx0,sy0);
+      if(moved) sticky=null;                  // 拖过 = 刚才在转星图,不是在看这颗
+      // 同一颗按第二下才打开 —— 免得转着转着误触跳走
+      else if(performance.now()-t0<600 && pressed && pressed===prevSticky){
+        if(pressed.kind==='center') openAbout(); else if(pressed.url) openLink(pressed);
+      }
     }
     if(e.touches.length===0) mode=0;
     else if(e.touches.length===1){            // 双指松掉一根 → 接着单指转
@@ -441,14 +453,6 @@ if(IS_TOUCH){
   });
   cv.addEventListener('touchcancel',()=>{ mode=0; dragging=false; });
 
-  // 轻点:第一下选中(出信息条),同一颗再点一下才打开 —— 免得转着转着误触跳走
-  function tap(x,y){
-    const n=pickAt(x,y);
-    if(!n){ sticky=null; return; }
-    if(n.kind==='center'){ if(sticky===n) openAbout(); else sticky=n; return; }
-    if(sticky===n && n.url) openLink(n);
-    else sticky=n;
-  }
   // 信息条本身也能点开,比再点一次小星点稳
   infocardEl.addEventListener('click',()=>{
     if(!sticky) return;
@@ -487,10 +491,12 @@ cv.addEventListener('click',()=>{
   else if(hover && hover.url) window.open(hover.url,'_blank','noopener');
 });
 // 压到星点上时,让光标环吸到那颗星上并收紧(环随透视近大远小)
+// 触屏读 sticky:手指按下的那一帧 hover 还没算出来,但 pickAt 已经把 _p 填好了,吸附不会晚一帧
 if(window.CursorFX) CursorFX.snap=()=>{
-  if(!hover||!hover._p) return null;
-  const p=hover._p;
-  return { x:p.sx, y:p.sy, r:hover.r*(0.35+0.7*p.persp)*zoom*1.35 + 11 };
+  const n = IS_TOUCH ? sticky : hover;
+  if(!n||!n._p) return null;
+  const p=n._p;
+  return { x:p.sx, y:p.sy, r:n.r*(0.35+0.7*p.persp)*zoom*RS*1.35 + 11 };
 };
 
 // ── render loop ──
